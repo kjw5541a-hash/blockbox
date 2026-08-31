@@ -57,6 +57,8 @@ static func rotate_cell(cell: Vector3i, axis: int, dir: int) -> Vector3i:
 # 조각이 제자리에서 도는 효과를 낸다. 최소점이 매 회전마다 보존되므로
 # 같은 축으로 4회 회전하면 원본과 정확히 일치한다.
 func rotated(axis: int, dir: int) -> Piece:
+	# dir 이 0 이면 좌표가 통째로 0 이 되어 조각 모양이 무너진다. 조용히 망가지느니 즉시 실패한다.
+	assert(dir == 1 or dir == -1, "회전 방향은 1 이나 -1 이어야 한다: %d" % dir)
 	var before_min := bbox_min(cells)
 	var turned: Array[Vector3i] = []
 	for c in cells:

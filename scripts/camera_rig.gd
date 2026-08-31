@@ -18,15 +18,20 @@ const TURN_TIME := 0.25
 var yaw_step := 0
 
 var _tween: Tween = null
+# 목표 각도를 누적해서 따로 들고 있는다. 진행 중인 트윈의 중간값에서 90도를 더하면
+# 빠르게 두 번 돌렸을 때 화면 각도가 yaw_step 과 영구히 어긋난다.
+var _yaw_target := YAW_BASE_DEG
 
 func _ready() -> void:
-	rotation_degrees = Vector3(PITCH_DEG, _yaw_degrees(), 0.0)
+	rotation_degrees = Vector3(PITCH_DEG, _yaw_target, 0.0)
 
-func _yaw_degrees() -> float:
-	return YAW_BASE_DEG + 90.0 * yaw_step
+# 현재 목표 각도. 감기지 않은 절대값이라 네 번 돌리면 360 이 된다.
+func yaw_degrees() -> float:
+	return _yaw_target
 
 func turn(dir: int) -> void:
 	yaw_step = wrapi(yaw_step + dir, 0, 4)
+	_yaw_target += 90.0 * dir
 	if not is_inside_tree():
 		return
 	if _tween != null and _tween.is_valid():
@@ -34,7 +39,7 @@ func turn(dir: int) -> void:
 	_tween = create_tween()
 	_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	var target := rotation_degrees
-	target.y += 90.0 * dir
+	target.y = _yaw_target
 	_tween.tween_property(self, "rotation_degrees", target, TURN_TIME)
 
 func axis_away() -> Vector3i:

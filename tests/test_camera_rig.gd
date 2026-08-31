@@ -11,6 +11,8 @@ func _initialize() -> void:
 	_test_turn_rotates_mapping_consistently()
 	_test_deltas_are_unit_axes()
 	_test_tilt_axis()
+	_test_mapping_is_pinned_to_axes()
+	_test_visual_yaw_tracks_yaw_step()
 	print("test_camera_rig: OK")
 	quit()
 
@@ -66,3 +68,19 @@ func _test_tilt_axis() -> void:
 	assert(r.tilt_axis(Vector3i(-1, 0, 0)) == [Piece.AXIS_X, -1])
 	assert(r.tilt_axis(Vector3i(0, 0, 1)) == [Piece.AXIS_Z, 1])
 	assert(r.tilt_axis(Vector3i(0, 0, -1)) == [Piece.AXIS_Z, -1])
+
+func _test_mapping_is_pinned_to_axes() -> void:
+	# 관계만 확인하면 AWAY 와 RIGHT 를 통째로 맞바꿔도 대부분의 테스트가 통과한다.
+	var r := _rig()
+	assert(r.axis_away() == Vector3i(0, 0, 1), "기본 시점의 안쪽은 +Z")
+	assert(r.axis_right() == Vector3i(1, 0, 0), "기본 시점의 오른쪽은 +X")
+
+func _test_visual_yaw_tracks_yaw_step() -> void:
+	var r := _rig()
+	# 트윈이 끝나기 전에 연달아 돌려도 목표 각도가 yaw_step 과 어긋나면 안 된다.
+	for dir in [1, 1, 1, -1, 1, 1]:
+		r.turn(dir)
+		var want := wrapf(CameraRig.YAW_BASE_DEG + 90.0 * r.yaw_step, 0.0, 360.0)
+		var got := wrapf(r.yaw_degrees(), 0.0, 360.0)
+		assert(absf(want - got) < 0.001,
+			"yaw_step %d 인데 화면 각도가 %f, 기대 %f" % [r.yaw_step, got, want])
