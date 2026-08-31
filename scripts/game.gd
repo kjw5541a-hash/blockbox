@@ -12,6 +12,16 @@ const FALL_SPEEDUP := 0.85
 const LOCK_DELAY := 0.5
 const MAX_LOCK_RESETS := 15
 
+# 회전이 막혔을 때 조각을 밀어보는 순서. 위로 미는 것을 마지막에 두는 이유는
+# 조각이 위로 밀리면 예상 착지 지점이 크게 달라져 플레이어의 예측이 깨지기 때문이다.
+const KICKS: Array[Vector3i] = [
+	Vector3i.ZERO,
+	Vector3i(1, 0, 0), Vector3i(-1, 0, 0),
+	Vector3i(0, 0, 1), Vector3i(0, 0, -1),
+	Vector3i(0, -1, 0),
+	Vector3i(0, 1, 0),
+]
+
 var board := Board.new()
 var current: Piece = null
 var next_kind := 0
@@ -141,3 +151,16 @@ func _lock_current() -> void:
 	current = null
 	piece_locked.emit()
 	_spawn()
+
+func rotate(axis: int, dir: int) -> bool:
+	if current == null or is_over:
+		return false
+	var turned := current.rotated(axis, dir)
+	for k in KICKS:
+		var candidate := turned.copy()
+		candidate.origin = current.origin + k
+		if board.is_valid(candidate.world_cells()):
+			current = candidate
+			_on_piece_changed()
+			return true
+	return false

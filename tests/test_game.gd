@@ -16,6 +16,9 @@ func _initialize() -> void:
 	_test_lock_delay_reset_limit()
 	_test_lock_reset_survives_reground()
 	_test_ghost_matches_hard_drop()
+	_test_rotate_keeps_piece_inside()
+	_test_rotate_never_overlaps()
+	_test_kick_order_prefers_horizontal()
 	print("test_game: OK")
 	quit()
 
@@ -148,3 +151,36 @@ func _test_lock_reset_survives_reground() -> void:
 		g.move(Vector3i(-1, 0, 0))
 		g.step(0.4)
 	assert(locked[0] >= 1, "턱을 들락거려도 갱신 상한은 소진되어야 한다")
+
+func _test_rotate_keeps_piece_inside() -> void:
+	var g := _make_game()
+	g.start(11)
+	for _i in 30:
+		g.rotate(Piece.AXIS_Y, 1)
+		g.rotate(Piece.AXIS_X, 1)
+		g.rotate(Piece.AXIS_Z, 1)
+		if g.current == null:
+			break
+		for c in g.current.world_cells():
+			assert(Board.in_bounds(c), "회전 결과 셀 %s 이 보드 밖" % c)
+
+func _test_rotate_never_overlaps() -> void:
+	var g := _make_game()
+	g.start(12)
+	# 바닥 두 층을 채워 회전 공간을 좁힌다.
+	for y in [0, 1]:
+		for z in Board.DEPTH:
+			for x in Board.WIDTH:
+				g.board.cells[Board.index(x, y, z)] = 1
+	while g.move(Vector3i(0, -1, 0)):
+		pass
+	for _i in 20:
+		g.rotate(Piece.AXIS_X, 1)
+		for c in g.current.world_cells():
+			assert(g.board.get_cell(c) == 0, "회전한 조각이 쌓인 블럭과 겹쳤다: %s" % c)
+
+func _test_kick_order_prefers_horizontal() -> void:
+	assert(Game.KICKS[0] == Vector3i.ZERO, "첫 시도는 제자리여야 한다")
+	assert(Game.KICKS[5] == Vector3i(0, -1, 0), "아래 밀기는 수평 4방향 다음이어야 한다")
+	assert(Game.KICKS[6] == Vector3i(0, 1, 0), "위로 밀기는 마지막이어야 한다")
+	assert(Game.KICKS.size() == 7, "킥 후보는 7개")
