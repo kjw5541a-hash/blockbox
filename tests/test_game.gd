@@ -227,10 +227,30 @@ func _test_layer_clear_scores() -> void:
 	assert(g.board.layer_fill_count(0) == 0, "지워진 자리는 비어야 한다")
 
 func _test_multi_layer_bonus() -> void:
-	assert(Game.CLEAR_MULTIPLIER[1] == 1)
-	assert(Game.CLEAR_MULTIPLIER[2] == 3)
-	assert(Game.CLEAR_MULTIPLIER[3] == 6)
-	assert(Game.CLEAR_MULTIPLIER[4] == 12)
+	var g := _make_game()
+	g.start(22)
+	# 0층과 1층에서 x 0..1, z=0 네 칸만 비우고 나머지를 채운다.
+	# X축으로 세운 O 조각이 그 구멍에 정확히 들어가 두 층을 한 번에 지운다.
+	for y in [0, 1]:
+		for z in Board.DEPTH:
+			for x in Board.WIDTH:
+				if z == 0 and x < 2:
+					continue
+				g.board.cells[Board.index(x, y, z)] = 1
+	var o_piece := Piece.create(2).rotated(Piece.AXIS_X, 1)
+	o_piece.origin = Vector3i(0, Board.HEIGHT - 2, 0)
+	assert(g.board.is_valid(o_piece.world_cells()), "세운 O 조각이 놓일 자리가 있어야 한다")
+	g.current = o_piece
+
+	var got := [0]
+	g.layers_cleared.connect(func(k: int) -> void: got[0] = k)
+	g.hard_drop()
+	assert(got[0] == 2, "두 층이 한 번에 지워져야 한다, 실제 %d" % got[0])
+	assert(g.total_layers == 2, "누적 층 수가 2여야 한다, 실제 %d" % g.total_layers)
+	# 동시 클리어 보너스: 두 층은 한 층의 두 배가 아니라 세 배다.
+	assert(g.score == Game.SCORE_PER_LAYER * 1 * Game.CLEAR_MULTIPLIER[2],
+		"두 층 클리어 점수가 배율대로여야 한다, 실제 %d" % g.score)
+	assert(g.board.layer_fill_count(0) == 0, "지워진 자리는 비어야 한다")
 
 func _test_level_rises() -> void:
 	var g := _make_game()
