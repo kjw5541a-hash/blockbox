@@ -12,6 +12,12 @@ const FALL_SPEEDUP := 0.85
 const LOCK_DELAY := 0.5
 const MAX_LOCK_RESETS := 15
 
+# 동시 클리어 배율. 3D에서는 여러 층을 한 번에 지우는 것이 유일한 고득점 수단이라
+# 보상을 크게 잡는다. 인덱스가 지운 층 수다.
+const CLEAR_MULTIPLIER := [0, 1, 3, 6, 12]
+const SCORE_PER_LAYER := 100
+const LEVEL_UP_LAYERS := 5
+
 # 회전이 막혔을 때 조각을 밀어보는 순서. 위로 미는 것을 마지막에 두는 이유는
 # 조각이 위로 밀리면 예상 착지 지점이 크게 달라져 플레이어의 예측이 깨지기 때문이다.
 const KICKS: Array[Vector3i] = [
@@ -27,6 +33,8 @@ var current: Piece = null
 var next_kind := 0
 var is_over := false
 var level := 1
+var score := 0
+var total_layers := 0
 
 var _bag: Array[int] = []
 var _fall_timer := 0.0
@@ -37,6 +45,9 @@ var _grounded := false
 func start(rng_seed: int = 0) -> void:
 	board = Board.new()
 	is_over = false
+	score = 0
+	level = 1
+	total_layers = 0
 	current = null
 	_bag.clear()
 	if rng_seed != 0:
@@ -150,6 +161,12 @@ func _lock_current() -> void:
 	board.lock(current.world_cells(), current.kind)
 	current = null
 	piece_locked.emit()
+	var n := board.clear_layers()
+	if n > 0:
+		total_layers += n
+		score += SCORE_PER_LAYER * level * CLEAR_MULTIPLIER[mini(n, 4)]
+		level = total_layers / LEVEL_UP_LAYERS + 1
+		layers_cleared.emit(n)
 	_spawn()
 
 func rotate(axis: int, dir: int) -> bool:

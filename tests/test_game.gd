@@ -19,6 +19,9 @@ func _initialize() -> void:
 	_test_rotate_keeps_piece_inside()
 	_test_rotate_never_overlaps()
 	_test_kick_order_prefers_horizontal()
+	_test_layer_clear_scores()
+	_test_multi_layer_bonus()
+	_test_level_rises()
 	print("test_game: OK")
 	quit()
 
@@ -195,3 +198,49 @@ func _test_kick_order_prefers_horizontal() -> void:
 	assert(Game.KICKS.size() == want.size(), "킥 후보는 7개")
 	for i in want.size():
 		assert(Game.KICKS[i] == want[i], "킥 순서가 %d 번째에서 다르다" % i)
+
+func _test_layer_clear_scores() -> void:
+	var g := _make_game()
+	g.start(21)
+	# 0층에서 z=0 줄 4칸만 비우고 나머지를 채운다.
+	# 한 칸짜리 구멍을 남기면 4칸 조각이 절대 메울 수 없으므로, I 조각이
+	# 정확히 들어가는 4칸 줄을 비워 둔다.
+	for z in Board.DEPTH:
+		if z == 0:
+			continue
+		for x in Board.WIDTH:
+			g.board.cells[Board.index(x, 0, z)] = 1
+	var i_piece := Piece.create(1)  # I 조각: x 방향 4칸, z=0
+	i_piece.origin = Vector3i(0, Board.HEIGHT - 1, 0)
+	assert(g.board.is_valid(i_piece.world_cells()), "I 조각이 놓일 자리가 있어야 한다")
+	g.current = i_piece
+
+	var got := [0]
+	g.layers_cleared.connect(func(k: int) -> void: got[0] = k)
+	var score_before := g.score
+	g.hard_drop()
+	assert(got[0] == 1, "빈 줄을 메우면 층이 지워져야 한다, 실제 %d" % got[0])
+	assert(score_before == 0, "시작 점수는 0")
+	assert(g.score == Game.SCORE_PER_LAYER * 1 * Game.CLEAR_MULTIPLIER[1],
+		"한 층 클리어 점수는 레벨 1 기준 공식대로여야 한다, 실제 %d" % g.score)
+	assert(g.total_layers == 1, "누적 층 수가 기록되어야 한다")
+	assert(g.board.layer_fill_count(0) == 0, "지워진 자리는 비어야 한다")
+
+func _test_multi_layer_bonus() -> void:
+	assert(Game.CLEAR_MULTIPLIER[1] == 1)
+	assert(Game.CLEAR_MULTIPLIER[2] == 3)
+	assert(Game.CLEAR_MULTIPLIER[3] == 6)
+	assert(Game.CLEAR_MULTIPLIER[4] == 12)
+
+func _test_level_rises() -> void:
+	var g := _make_game()
+	g.start(23)
+	assert(g.level == 1, "시작 레벨은 1")
+	var first := g.fall_interval()
+	g.total_layers = Game.LEVEL_UP_LAYERS * 3
+	g.level = g.total_layers / Game.LEVEL_UP_LAYERS + 1
+	assert(g.level == 4, "층 15개면 레벨 4")
+	assert(g.fall_interval() < first, "레벨이 오르면 낙하가 빨라져야 한다")
+	g.total_layers = 500
+	g.level = g.total_layers / Game.LEVEL_UP_LAYERS + 1
+	assert(g.fall_interval() == Game.MIN_FALL_INTERVAL, "낙하 간격에 하한이 있어야 한다")
