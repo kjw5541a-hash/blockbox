@@ -6,12 +6,23 @@ signal piece_locked
 signal layers_cleared(count: int)
 signal game_over
 
+const BASE_FALL_INTERVAL := 1.0
+const MIN_FALL_INTERVAL := 0.15
+const FALL_SPEEDUP := 0.85
+const LOCK_DELAY := 0.5
+const MAX_LOCK_RESETS := 15
+
 var board := Board.new()
 var current: Piece = null
 var next_kind := 0
 var is_over := false
+var level := 1
 
 var _bag: Array[int] = []
+var _fall_timer := 0.0
+var _lock_timer := 0.0
+var _lock_resets := 0
+var _grounded := false
 
 func start(rng_seed: int = 0) -> void:
 	board = Board.new()
@@ -51,4 +62,84 @@ func _spawn() -> void:
 		game_over.emit()
 		return
 	current = p
+	_fall_timer = 0.0
+	_lock_timer = 0.0
+	_lock_resets = 0
+	_grounded = false
 	piece_moved.emit()
+
+func fall_interval() -> float:
+	return maxf(MIN_FALL_INTERVAL, BASE_FALL_INTERVAL * pow(FALL_SPEEDUP, level - 1))
+
+func move(delta: Vector3i) -> bool:
+	if current == null or is_over:
+		return false
+	var moved := current.copy()
+	moved.origin += delta
+	if not board.is_valid(moved.world_cells()):
+		return false
+	current = moved
+	_on_piece_changed()
+	return true
+
+func _can_fall() -> bool:
+	if current == null:
+		return false
+	var down := current.copy()
+	down.origin += Vector3i(0, -1, 0)
+	return board.is_valid(down.world_cells())
+
+func _on_piece_changed() -> void:
+	var was_grounded := _grounded
+	_grounded = not _can_fall()
+	if _grounded:
+		if not was_grounded:
+			_lock_timer = 0.0
+		elif _lock_resets < MAX_LOCK_RESETS:
+			_lock_timer = 0.0
+			_lock_resets += 1
+	piece_moved.emit()
+
+func step(delta: float) -> void:
+	if is_over or current == null:
+		return
+	if not _grounded:
+		_grounded = not _can_fall()
+	if _grounded:
+		_lock_timer += delta
+		if _lock_timer >= LOCK_DELAY:
+			_lock_current()
+		return
+	_fall_timer += delta
+	if _fall_timer >= fall_interval():
+		_fall_timer = 0.0
+		if not move(Vector3i(0, -1, 0)):
+			_grounded = true
+			_lock_timer = 0.0
+
+func hard_drop() -> void:
+	if current == null or is_over:
+		return
+	while move(Vector3i(0, -1, 0)):
+		pass
+	_lock_current()
+
+func ghost_cells() -> Array[Vector3i]:
+	if current == null:
+		return []
+	var g := current.copy()
+	while true:
+		var down := g.copy()
+		down.origin += Vector3i(0, -1, 0)
+		if not board.is_valid(down.world_cells()):
+			break
+		g = down
+	return g.world_cells()
+
+func _lock_current() -> void:
+	if current == null:
+		return
+	board.lock(current.world_cells(), current.kind)
+	current = null
+	piece_locked.emit()
+	_spawn()

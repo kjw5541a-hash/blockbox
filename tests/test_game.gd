@@ -10,6 +10,11 @@ func _initialize() -> void:
 	_test_spawn_is_inside_board()
 	_test_bag_gives_each_kind_once()
 	_test_game_over_when_spawn_blocked()
+	_test_move_blocked_by_wall()
+	_test_gravity_lowers_piece()
+	_test_hard_drop_lands_and_respawns()
+	_test_lock_delay_reset_limit()
+	_test_ghost_matches_hard_drop()
 	print("test_game: OK")
 	quit()
 
@@ -61,3 +66,61 @@ func _test_game_over_when_spawn_blocked() -> void:
 	assert(g.is_over, "스폰이 막히면 게임오버여야 한다")
 	assert(fired[0], "game_over 신호가 발생해야 한다")
 	assert(g.current == null, "게임오버 후 현재 조각은 없어야 한다")
+
+func _test_move_blocked_by_wall() -> void:
+	var g := _make_game()
+	g.start(3)
+	# 왼쪽으로 계속 밀면 언젠가 벽에 막혀 false 가 나와야 한다.
+	var blocked := false
+	for _i in 10:
+		if not g.move(Vector3i(-1, 0, 0)):
+			blocked = true
+			break
+	assert(blocked, "벽에 닿으면 이동이 실패해야 한다")
+	for c in g.current.world_cells():
+		assert(Board.in_bounds(c), "실패한 이동이 조각을 밖으로 내보내면 안 된다")
+
+func _test_gravity_lowers_piece() -> void:
+	var g := _make_game()
+	g.start(4)
+	var y_before := g.current.origin.y
+	g.step(g.fall_interval() + 0.01)
+	assert(g.current.origin.y == y_before - 1, "중력 한 번에 한 칸 내려가야 한다")
+
+func _test_hard_drop_lands_and_respawns() -> void:
+	var g := _make_game()
+	g.start(5)
+	var locked := [0]
+	g.piece_locked.connect(func() -> void: locked[0] += 1)
+	g.hard_drop()
+	assert(locked[0] == 1, "하드드롭은 조각을 즉시 잠가야 한다")
+	assert(g.board.layer_fill_count(0) == 4, "바닥층에 조각 4칸이 놓여야 한다")
+	assert(g.current != null, "잠금 후 새 조각이 스폰되어야 한다")
+	assert(g.current.origin.y > 0, "새 조각은 위에서 스폰되어야 한다")
+
+func _test_lock_delay_reset_limit() -> void:
+	var g := _make_game()
+	g.start(6)
+	# 바닥까지 내린 뒤 잠기기 직전 상태로 만든다.
+	while g.move(Vector3i(0, -1, 0)):
+		pass
+	g.step(0.01)  # 접지 인식
+	var locked := [0]
+	g.piece_locked.connect(func() -> void: locked[0] += 1)
+	# 갱신 상한을 넘겨 흔든다. 상한이 없으면 영원히 잠기지 않는다.
+	for _i in 40:
+		g.step(0.4)
+		g.move(Vector3i(1, 0, 0))
+		g.move(Vector3i(-1, 0, 0))
+	assert(locked[0] >= 1, "갱신 상한이 있으면 결국 잠겨야 한다")
+
+func _test_ghost_matches_hard_drop() -> void:
+	var g := _make_game()
+	g.start(8)
+	var ghost := g.ghost_cells()
+	var before := g.current
+	g.hard_drop()
+	# 잠긴 자리가 고스트가 가리킨 자리와 같아야 한다.
+	for c in ghost:
+		assert(g.board.get_cell(c) == before.kind,
+			"고스트 셀 %s 에 조각이 없다" % c)
