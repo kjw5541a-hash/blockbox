@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/board_view.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/piece_view.gd" id="4"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/touch_input.gd" id="6"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1")
@@ -26,6 +27,9 @@ script = ExtResource("5")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 24)
 projection = 1
 size = 20.0
+
+[node name="TouchInput" type="Node" parent="."]
+script = ExtResource("6")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.86, -0.35, 0.37, 0, 0.72, 0.69, -0.5, -0.6, 0.63, 0, 20, 0)

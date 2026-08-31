@@ -4,10 +4,12 @@ extends Node3D
 @onready var rig: CameraRig = $CameraRig
 @onready var board_view := $BoardView
 @onready var piece_view := $PieceView
+@onready var touch_input := $TouchInput
 
 func _ready() -> void:
 	board_view.setup(game)
 	piece_view.setup(game)
+	touch_input.setup(game, rig)
 	game.start()
 
 func _process(delta: float) -> void:
