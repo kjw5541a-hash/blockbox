@@ -174,13 +174,24 @@ func _test_rotate_never_overlaps() -> void:
 				g.board.cells[Board.index(x, y, z)] = 1
 	while g.move(Vector3i(0, -1, 0)):
 		pass
+	# 회전이 한 번도 성공하지 않으면 겹침 검사가 통과해도 아무것도 증명하지 못한다.
+	var rotated_any := false
 	for _i in 20:
-		g.rotate(Piece.AXIS_X, 1)
+		if g.rotate(Piece.AXIS_X, 1):
+			rotated_any = true
 		for c in g.current.world_cells():
 			assert(g.board.get_cell(c) == 0, "회전한 조각이 쌓인 블럭과 겹쳤다: %s" % c)
+	assert(rotated_any, "좁은 자리에서도 회전이 최소 한 번은 성공해야 한다")
 
 func _test_kick_order_prefers_horizontal() -> void:
-	assert(Game.KICKS[0] == Vector3i.ZERO, "첫 시도는 제자리여야 한다")
-	assert(Game.KICKS[5] == Vector3i(0, -1, 0), "아래 밀기는 수평 4방향 다음이어야 한다")
-	assert(Game.KICKS[6] == Vector3i(0, 1, 0), "위로 밀기는 마지막이어야 한다")
-	assert(Game.KICKS.size() == 7, "킥 후보는 7개")
+	# 순서 전체를 고정한다. 인덱스 몇 개만 보면 수평 후보끼리 뒤바뀌어도 못 잡는다.
+	var want := [
+		Vector3i.ZERO,
+		Vector3i(1, 0, 0), Vector3i(-1, 0, 0),
+		Vector3i(0, 0, 1), Vector3i(0, 0, -1),
+		Vector3i(0, -1, 0),
+		Vector3i(0, 1, 0),
+	]
+	assert(Game.KICKS.size() == want.size(), "킥 후보는 7개")
+	for i in want.size():
+		assert(Game.KICKS[i] == want[i], "킥 순서가 %d 번째에서 다르다" % i)
