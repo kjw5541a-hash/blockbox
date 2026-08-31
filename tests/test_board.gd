@@ -8,6 +8,9 @@ func _initialize() -> void:
 	_test_lock_and_fill_count()
 	_test_clear_single_layer()
 	_test_clear_two_layers()
+	_test_get_cell_all_faces()
+	_test_lock_no_cross_write()
+	_test_layer_fill_count_faces()
 	print("test_board: OK")
 	quit()
 
@@ -82,3 +85,34 @@ func _test_clear_two_layers() -> void:
 	assert(b.get_cell(Vector3i(3, 1, 3)) == 9, "위쪽 표식이 두 칸 내려와야 한다")
 	assert(b.layer_fill_count(2) == 0, "비워진 자리는 빈 층이어야 한다")
 	assert(b.layer_fill_count(13) == 0, "맨 위층은 비어야 한다")
+
+func _test_get_cell_all_faces() -> void:
+	var b := Board.new()
+	# 상자의 여섯 면 각각에서 경계 좌표가 정상 동작하는지 확인한다.
+	var faces: Array[Vector3i] = [
+		Vector3i(0, 5, 2),                     # x = 0 면
+		Vector3i(Board.WIDTH - 1, 5, 2),       # x = WIDTH-1 면
+		Vector3i(2, 5, 0),                     # z = 0 면
+		Vector3i(2, 5, Board.DEPTH - 1),       # z = DEPTH-1 면
+		Vector3i(2, 0, 2),                     # y = 0 면
+		Vector3i(2, Board.HEIGHT - 1, 2),      # y = HEIGHT-1 면
+	]
+	for i in faces.size():
+		var c: Vector3i = faces[i]
+		b.lock([c] as Array[Vector3i], i + 1)
+		assert(b.get_cell(c) == i + 1, "경계 좌표 %s 값이 어긋났다" % c)
+
+func _test_lock_no_cross_write() -> void:
+	var b := Board.new()
+	b.lock([Vector3i(3, 0, 0)] as Array[Vector3i], 5)
+	assert(b.get_cell(Vector3i(3, 0, 0)) == 5, "잠근 칸 (3,0,0)에 값이 있어야 한다")
+	assert(b.get_cell(Vector3i(0, 0, 1)) == 0, "앨리어싱될 뻔한 칸 (0,0,1)은 비어 있어야 한다")
+
+func _test_layer_fill_count_faces() -> void:
+	var b := Board.new()
+	assert(b.layer_fill_count(0) == 0, "새 보드의 0층은 비어 있어야 한다")
+	assert(b.layer_fill_count(Board.HEIGHT - 1) == 0, "새 보드의 맨 위층은 비어 있어야 한다")
+	b.lock([Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(2, 0, 0)] as Array[Vector3i], 3)
+	b.lock([Vector3i(0, Board.HEIGHT - 1, 0)] as Array[Vector3i], 4)
+	assert(b.layer_fill_count(0) == 3, "0층은 3칸 차 있어야 한다")
+	assert(b.layer_fill_count(Board.HEIGHT - 1) == 1, "맨 위층은 1칸 차 있어야 한다")

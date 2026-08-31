@@ -24,6 +24,7 @@ static func in_bounds(c: Vector3i) -> bool:
 		and c.z >= 0 and c.z < DEPTH
 
 func get_cell(c: Vector3i) -> int:
+	assert(in_bounds(c), "범위 밖 좌표: %s" % c)
 	return cells[index(c.x, c.y, c.z)]
 
 func is_valid(world_cells: Array[Vector3i]) -> bool:
@@ -36,9 +37,11 @@ func is_valid(world_cells: Array[Vector3i]) -> bool:
 
 func lock(world_cells: Array[Vector3i], kind: int) -> void:
 	for c in world_cells:
+		assert(in_bounds(c), "범위 밖 좌표: %s" % c)
 		cells[index(c.x, c.y, c.z)] = kind
 
 func layer_fill_count(y: int) -> int:
+	assert(y >= 0 and y < HEIGHT, "범위 밖 층: %d" % y)
 	var n := 0
 	var base := y * LAYER_CELLS
 	for i in LAYER_CELLS:
