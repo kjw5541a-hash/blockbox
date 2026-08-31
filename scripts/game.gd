@@ -90,14 +90,12 @@ func _can_fall() -> bool:
 	return board.is_valid(down.world_cells())
 
 func _on_piece_changed() -> void:
-	var was_grounded := _grounded
 	_grounded = not _can_fall()
-	if _grounded:
-		if not was_grounded:
-			_lock_timer = 0.0
-		elif _lock_resets < MAX_LOCK_RESETS:
-			_lock_timer = 0.0
-			_lock_resets += 1
+	# 접지될 때마다 예산을 쓴다. 땅에서 벗어났다 돌아오는 것을 공짜로 쳐주면
+	# 조각을 좌우로 흔들어 영원히 잠기지 않게 만들 수 있다.
+	if _grounded and _lock_resets < MAX_LOCK_RESETS:
+		_lock_timer = 0.0
+		_lock_resets += 1
 	piece_moved.emit()
 
 func step(delta: float) -> void:

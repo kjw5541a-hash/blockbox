@@ -14,6 +14,7 @@ func _initialize() -> void:
 	_test_gravity_lowers_piece()
 	_test_hard_drop_lands_and_respawns()
 	_test_lock_delay_reset_limit()
+	_test_lock_reset_survives_reground()
 	_test_ghost_matches_hard_drop()
 	print("test_game: OK")
 	quit()
@@ -124,3 +125,26 @@ func _test_ghost_matches_hard_drop() -> void:
 	for c in ghost:
 		assert(g.board.get_cell(c) == before.kind,
 			"고스트 셀 %s 에 조각이 없다" % c)
+
+func _test_lock_reset_survives_reground() -> void:
+	var g := _make_game()
+	g.start(9)
+	# x 0..1 쪽에만 바닥을 깔아 턱을 만든다. 조각이 x 2..3 위로 나가면 다시 떨어진다.
+	for z in Board.DEPTH:
+		for x in 2:
+			g.board.cells[Board.index(x, 0, z)] = 1
+	# O 조각을 턱 위에 직접 올린다. 무작위 조각에 기대지 않으려는 것.
+	var p := Piece.create(2)
+	p.origin = Vector3i(0, 1, 0)
+	g.current = p
+	g.step(0.01)  # 접지 인식
+	var locked := [0]
+	g.piece_locked.connect(func() -> void: locked[0] += 1)
+	# 턱 밖으로 나갔다 돌아오기를 반복한다. 재접지가 공짜면 영원히 안 잠긴다.
+	for _i in 40:
+		g.move(Vector3i(1, 0, 0))
+		g.move(Vector3i(1, 0, 0))
+		g.move(Vector3i(-1, 0, 0))
+		g.move(Vector3i(-1, 0, 0))
+		g.step(0.4)
+	assert(locked[0] >= 1, "턱을 들락거려도 갱신 상한은 소진되어야 한다")
