@@ -45,3 +45,16 @@ func layer_fill_count(y: int) -> int:
 		if cells[base + i] != 0:
 			n += 1
 	return n
+
+func clear_layers() -> int:
+	var kept := PackedInt32Array()
+	var cleared := 0
+	for y in HEIGHT:
+		if layer_fill_count(y) >= LAYER_CLEAR_THRESHOLD:
+			cleared += 1
+			continue
+		kept.append_array(cells.slice(y * LAYER_CELLS, (y + 1) * LAYER_CELLS))
+	# resize 로 늘어난 칸은 0으로 채워지므로 위쪽에 빈 층이 생긴다.
+	kept.resize(WIDTH * DEPTH * HEIGHT)
+	cells = kept
+	return cleared

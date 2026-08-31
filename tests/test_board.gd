@@ -6,6 +6,8 @@ func _initialize() -> void:
 	_test_bounds()
 	_test_is_valid_rejects_occupied()
 	_test_lock_and_fill_count()
+	_test_clear_single_layer()
+	_test_clear_two_layers()
 	print("test_board: OK")
 	quit()
 
@@ -52,3 +54,31 @@ func _test_lock_and_fill_count() -> void:
 	assert(b.get_cell(Vector3i(0, 0, 0)) == 7, "잠근 칸에 종류 값이 들어가야 한다")
 	assert(b.layer_fill_count(0) == 2, "0층은 2칸 차 있어야 한다")
 	assert(b.layer_fill_count(1) == 0, "1층은 비어 있어야 한다")
+
+func _fill_layer(b: Board, y: int, kind: int) -> void:
+	for z in Board.DEPTH:
+		for x in Board.WIDTH:
+			b.cells[Board.index(x, y, z)] = kind
+
+func _test_clear_single_layer() -> void:
+	var b := Board.new()
+	_fill_layer(b, 0, 1)
+	b.cells[Board.index(2, 1, 2)] = 9  # 1층에 표식 하나
+	var cleared := b.clear_layers()
+	assert(cleared == 1, "한 층이 지워져야 한다, 실제 %d" % cleared)
+	assert(b.layer_fill_count(1) == 0, "1층은 비어야 한다")
+	assert(b.get_cell(Vector3i(2, 0, 2)) == 9, "위층 표식이 정확히 한 칸 내려와야 한다")
+	assert(b.cells.size() == 224, "클리어 후에도 크기가 유지되어야 한다")
+
+func _test_clear_two_layers() -> void:
+	var b := Board.new()
+	_fill_layer(b, 0, 1)
+	_fill_layer(b, 2, 1)
+	b.cells[Board.index(1, 1, 1)] = 8   # 지워지는 두 층 사이
+	b.cells[Board.index(3, 3, 3)] = 9   # 지워지는 층들 위
+	var cleared := b.clear_layers()
+	assert(cleared == 2, "두 층이 지워져야 한다, 실제 %d" % cleared)
+	assert(b.get_cell(Vector3i(1, 0, 1)) == 8, "사이 층 표식이 0층으로 내려와야 한다")
+	assert(b.get_cell(Vector3i(3, 1, 3)) == 9, "위쪽 표식이 두 칸 내려와야 한다")
+	assert(b.layer_fill_count(2) == 0, "비워진 자리는 빈 층이어야 한다")
+	assert(b.layer_fill_count(13) == 0, "맨 위층은 비어야 한다")
