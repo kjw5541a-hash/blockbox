@@ -6,11 +6,12 @@ func _initialize() -> void:
 	_test_four_rotations_identity()
 	_test_rotation_is_reversible()
 	_test_world_cells()
+	_test_new_shapes_are_non_planar()
 	print("test_piece: OK")
 	quit()
 
 func _test_shape_sanity() -> void:
-	assert(Piece.SHAPES.size() == 5, "1단계 조각은 5종이어야 한다")
+	assert(Piece.SHAPES.size() == 8, "2단계 조각은 8종이어야 한다")
 	for kind in Piece.SHAPES:
 		var p := Piece.create(kind)
 		assert(p.cells.size() == 4, "조각 %d 는 셀이 4개여야 한다" % kind)
@@ -66,6 +67,21 @@ func _test_world_cells() -> void:
 	var world := p.world_cells()
 	for i in p.cells.size():
 		assert(world[i] == p.cells[i] + Vector3i(2, 3, 1), "world_cells 가 origin 을 더하지 않았다")
+
+func _test_new_shapes_are_non_planar() -> void:
+	# 6, 7, 8번은 비평면(진짜 3D) 조각이어야 한다: 어느 축으로도 x=c, y=c, z=c
+	# 평면 하나에 다 담기면 안 되므로 x/y/z 값이 각각 2가지 이상 나와야 한다.
+	for kind in [6, 7, 8]:
+		var cells := Piece.create(kind).cells
+		var xs := {}
+		var ys := {}
+		var zs := {}
+		for c in cells:
+			xs[c.x] = true
+			ys[c.y] = true
+			zs[c.z] = true
+		assert(xs.size() > 1 and ys.size() > 1 and zs.size() > 1,
+			"조각 %d 는 평면 하나에 담긴다 (비평면이어야 한다)" % kind)
 
 func _same_cells(a: Array[Vector3i], b: Array[Vector3i]) -> bool:
 	if a.size() != b.size():

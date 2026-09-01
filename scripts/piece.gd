@@ -13,6 +13,10 @@ const SHAPES := {
 	3: [Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(2, 0, 0), Vector3i(1, 0, 1)],  # T
 	4: [Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(1, 0, 1), Vector3i(2, 0, 1)],  # S
 	5: [Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(2, 0, 0), Vector3i(2, 0, 1)],  # L
+	# 비평면 3종. 6번과 7번은 서로 거울상이며 3D 회전으로 겹칠 수 없다.
+	6: [Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(1, 1, 0), Vector3i(1, 1, 1)],  # 오른나사
+	7: [Vector3i(0, 0, 1), Vector3i(1, 0, 1), Vector3i(1, 1, 1), Vector3i(1, 1, 0)],  # 왼나사
+	8: [Vector3i(0, 0, 0), Vector3i(1, 0, 0), Vector3i(0, 1, 0), Vector3i(0, 0, 1)],  # 삼각
 }
 
 var kind := 0

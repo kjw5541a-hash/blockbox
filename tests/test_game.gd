@@ -17,6 +17,7 @@ func _initialize() -> void:
 	_test_lock_reset_survives_reground()
 	_test_ghost_matches_hard_drop()
 	_test_rotate_keeps_piece_inside()
+	_test_new_shapes_rotate_within_board()
 	_test_rotate_never_overlaps()
 	_test_kick_order_prefers_horizontal()
 	_test_layer_clear_scores()
@@ -168,6 +169,22 @@ func _test_rotate_keeps_piece_inside() -> void:
 			break
 		for c in g.current.world_cells():
 			assert(Board.in_bounds(c), "회전 결과 셀 %s 이 보드 밖" % c)
+
+func _test_new_shapes_rotate_within_board() -> void:
+	# 비평면 조각 3종(6,7,8)을 스폰 위치에서 세 축 모두로 킥 탐색까지 포함해
+	# 회전시켜도 결과 셀이 항상 보드 안에 있어야 한다.
+	for kind in [6, 7, 8]:
+		var g := _make_game()
+		g.start(kind)
+		var p := Piece.create(kind)
+		p.origin = g.spawn_origin_for(p)
+		g.current = p
+		for axis in [Piece.AXIS_X, Piece.AXIS_Y, Piece.AXIS_Z]:
+			for dir in [1, -1]:
+				g.rotate(axis, dir)
+				assert(g.current != null, "조각 %d 회전 중 사라지면 안 된다" % kind)
+				for c in g.current.world_cells():
+					assert(Board.in_bounds(c), "조각 %d 회전 결과 셀 %s 이 보드 밖" % [kind, c])
 
 func _test_rotate_never_overlaps() -> void:
 	var g := _make_game()
