@@ -11,6 +11,7 @@ func _ready() -> void:
 	piece_view.setup(game)
 	touch_input.setup(game, rig)
 	game.start()
+	$HUD.setup(game, rig)
 
 func _process(delta: float) -> void:
 	game.step(delta)
@@ -48,3 +49,4 @@ func _unhandled_input(event: InputEvent) -> void:
 			game.start()
 			board_view.refresh()
 			piece_view.refresh()
+			$HUD/GameOver.visible = false
