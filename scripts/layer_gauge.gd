@@ -42,6 +42,9 @@ func refresh() -> void:
 		var y := Board.HEIGHT - 1 - i  # 화면 위쪽이 높은 층
 		var n := game.board.layer_fill_count(y)
 		var bar := _bars[i]
-		bar.size = Vector2(48.0 * float(n) / float(Board.LAYER_CELLS), BAR_HEIGHT)
+		# 분모는 층의 칸 수가 아니라 클리어 기준이다. 쉬움은 몇 칸 봐주므로
+		# 칸 수로 나누면 막대가 끝까지 차기 전에 층이 사라져 게이지가 거짓말을 한다.
+		var ratio := minf(float(n) / float(Board.LAYER_CLEAR_THRESHOLD), 1.0)
+		bar.size = Vector2(48.0 * ratio, BAR_HEIGHT)
 		# 한 칸만 남았으면 색을 바꿔 알려준다.
 		bar.color = NEAR_COLOR if n >= Board.LAYER_CLEAR_THRESHOLD - 1 else FILL_COLOR

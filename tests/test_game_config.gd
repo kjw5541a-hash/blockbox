@@ -20,13 +20,13 @@ func _test_apply_sets_board() -> void:
 	assert(Board.WIDTH == 5 and Board.DEPTH == 5, "5x5 로 설정되어야 한다")
 	assert(Board.LAYER_CELLS == 25, "한 층은 25칸: %d" % Board.LAYER_CELLS)
 	assert(Board.new().cells.size() == 25 * Board.HEIGHT, "보드 칸 수가 크기를 따라야 한다")
-	assert(Board.LAYER_CLEAR_THRESHOLD == 24,
-		"보통은 한 칸 봐준다: %d" % Board.LAYER_CLEAR_THRESHOLD)
+	assert(Board.LAYER_CLEAR_THRESHOLD == 25,
+		"보통은 봐주지 않는다 — 한 층을 꽉 채워야 한다: %d" % Board.LAYER_CLEAR_THRESHOLD)
 
 	GameConfig.difficulty = GameConfig.EASY
 	GameConfig.apply()
 	assert(Board.LAYER_CLEAR_THRESHOLD == 23,
-		"쉬움은 두 칸 봐준다: %d" % Board.LAYER_CLEAR_THRESHOLD)
+		"쉬움만 두 칸 봐준다: %d" % Board.LAYER_CLEAR_THRESHOLD)
 
 	GameConfig.size = 6
 	GameConfig.difficulty = GameConfig.HARD

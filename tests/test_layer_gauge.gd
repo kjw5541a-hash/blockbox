@@ -5,6 +5,7 @@ extends SceneTree
 # 않는지를 확인한다 (씬이 뜨는지만 보는 건 부족한 테스트라 별도로 둔다).
 func _initialize() -> void:
 	await _test_bar_width_and_color_track_fill()
+	await _test_bar_is_relative_to_the_clear_threshold()
 	print("test_layer_gauge: OK")
 	quit()
 
@@ -39,7 +40,8 @@ func _test_bar_width_and_color_track_fill() -> void:
 	var bar_index := Board.HEIGHT - 1  # y=0 은 역순 배치라 배열 맨 끝
 	var bar: ColorRect = gauge._bars[bar_index]
 	var full_width := 48.0
-	var expect_near := full_width * float(Board.LAYER_CLEAR_THRESHOLD - 1) / float(Board.LAYER_CELLS)
+	var expect_near := full_width * float(Board.LAYER_CLEAR_THRESHOLD - 1) \
+		/ float(Board.LAYER_CLEAR_THRESHOLD)
 	assert(is_equal_approx(bar.size.x, expect_near),
 		"막대 너비가 채움 비율과 어긋난다: %f, 기대 %f" % [bar.size.x, expect_near])
 	assert(bar.size.x < full_width - 0.01, "LAYER_CLEAR_THRESHOLD-1 칸이면 아직 꽉 찬 게 아니다")
@@ -67,3 +69,48 @@ func _test_bar_width_and_color_track_fill() -> void:
 		assert(is_equal_approx(empty_bar.size.x, 0.0),
 			"빈 층의 막대는 폭이 0이어야 한다: 인덱스 %d, 폭 %f" % [i, empty_bar.size.x])
 		assert(empty_bar.color == gauge.FILL_COLOR, "빈 층은 경고색이 아니어야 한다")
+
+
+# 쉬움은 클리어 기준이 한 층보다 낮다. 막대를 층의 칸 수로 나누면 끝까지 차기도
+# 전에 층이 사라져, 게이지가 "아직 멀었다"고 거짓말을 하게 된다.
+# 기본값(어려움)은 기준 = 한 층이라 두 계산이 같아 이 차이가 드러나지 않는다.
+func _test_bar_is_relative_to_the_clear_threshold() -> void:
+	GameConfig.size = 4
+	GameConfig.difficulty = GameConfig.EASY
+	GameConfig.apply()
+	var t := Board.LAYER_CLEAR_THRESHOLD
+	assert(t < Board.LAYER_CELLS, "쉬움은 봐주는 칸이 있어야 이 테스트가 의미 있다")
+
+	var game := Game.new()
+	root.add_child(game)
+	game.start(11)
+	var gauge = load("res://scripts/layer_gauge.gd").new()
+	root.add_child(gauge)
+	await process_frame
+
+	var bar: ColorRect = gauge._bars[Board.HEIGHT - 1]
+	var full_width := 48.0
+
+	game.board.lock(_cells_for(t - 1), 1)
+	gauge.setup(game)
+	assert(is_equal_approx(bar.size.x, full_width * float(t - 1) / float(t)),
+		"막대는 층의 칸 수가 아니라 클리어 기준에 대한 비율이어야 한다: %f" % bar.size.x)
+	assert(bar.color == gauge.NEAR_COLOR, "한 칸 남으면 경고색")
+
+	# 기준에 닿는 순간 막대가 끝까지 차야 한다. 이 층은 다음 잠금에서 사라진다.
+	game.board.lock(_cells_for(t), 1)
+	gauge.refresh()
+	assert(is_equal_approx(bar.size.x, full_width),
+		"클리어 기준에 닿으면 막대가 꽉 차야 한다: %f" % bar.size.x)
+
+	# 기준을 넘겨도 막대가 상자 밖으로 삐져나가면 안 된다.
+	game.board.lock(_cells_for(Board.LAYER_CELLS), 1)
+	gauge.refresh()
+	assert(is_equal_approx(bar.size.x, full_width),
+		"기준을 넘어도 막대는 끝에서 멈춰야 한다: %f" % bar.size.x)
+
+	game.queue_free()
+	gauge.queue_free()
+	GameConfig.size = 4
+	GameConfig.difficulty = GameConfig.HARD
+	GameConfig.apply()
