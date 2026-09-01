@@ -20,6 +20,7 @@ func setup(g: Game, r: CameraRig) -> void:
 	game.game_over.connect(_on_game_over)
 	_refresh_score()
 	_refresh_next()
+	$LayerGauge.setup(game)
 
 # 다음 조각 미리보기. 3D 미니 뷰포트 대신 색 견본 하나로 보여준다.
 # 조각 종류는 색으로 구분되므로 이것으로 충분하다.

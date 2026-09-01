@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game.gd" id="2"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="5"]
 [ext_resource type="Script" path="res://scripts/touch_input.gd" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="7"]
+[ext_resource type="Script" path="res://scripts/box_frame.gd" id="8"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1")
@@ -36,3 +37,6 @@ script = ExtResource("6")
 transform = Transform3D(0.86, -0.35, 0.37, 0, 0.72, 0.69, -0.5, -0.6, 0.63, 0, 20, 0)
 
 [node name="HUD" parent="." instance=ExtResource("7")]
+
+[node name="BoxFrame" type="Node3D" parent="."]
+script = ExtResource("8")
