@@ -1,13 +1,16 @@
 extends SceneTree
 
 func _initialize() -> void:
-	# 이전 실행이 남긴 파일을 지우고 시작한다 — 이전 상태에 기대지 않는다.
+	# 실제 기록 파일을 건드리면 사람이 플레이해 얻은 최고점수가 날아간다.
+	# 테스트 전용 경로로 갈아끼우고, 그 파일만 지운다.
+	SaveData.PATH = "user://test_save_data.cfg"
 	var abs_path := ProjectSettings.globalize_path(SaveData.PATH)
 	DirAccess.remove_absolute(abs_path)
 	_test_default_is_zero()
 	_test_submit_keeps_max()
 	_test_persists_across_reload()
 	_test_garbage_content()
+	_test_wrong_type_value()
 	# 이 테스트가 남긴 파일이 다음 실행에 영향을 주지 않도록 지운다.
 	DirAccess.remove_absolute(abs_path)
 	print("test_save_data: OK")
@@ -30,3 +33,10 @@ func _test_garbage_content() -> void:
 	f.store_string("이건 ConfigFile 형식이 아니다 {{{ ???")
 	f.close()
 	assert(SaveData.load_high_score() == 0, "손상된 파일이면 0을 반환해야 한다")
+
+func _test_wrong_type_value() -> void:
+	# ConfigFile 로는 멀쩡히 읽히지만 값이 정수가 아닌 경우.
+	var cfg := ConfigFile.new()
+	cfg.set_value(SaveData.SECTION, SaveData.KEY, [1, 2, 3])
+	cfg.save(SaveData.PATH)
+	assert(SaveData.load_high_score() == 0, "정수가 아닌 값이면 0을 반환해야 한다")
