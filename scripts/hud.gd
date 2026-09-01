@@ -46,3 +46,4 @@ func restart() -> void:
 	$GameOver.visible = false
 	_refresh_score()
 	_refresh_next()
+	$LayerGauge.refresh()

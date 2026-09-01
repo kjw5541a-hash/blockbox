@@ -67,6 +67,10 @@ func _initialize() -> void:
 	assert(hud.get_node("Top/NextSwatch").color == BlockColors.of(game.next_kind),
 		"다음 조각 색 견본이 실제 next_kind 와 어긋난다")
 
+	var gauge := hud.get_node("LayerGauge")
+	var gauge_bar: ColorRect = gauge._bars[Board.HEIGHT - 1]
+	gauge_bar.size.x = 48.0
+
 	var score_label: Label = hud.get_node("Top/Score")
 	score_label.text = "낡은 값"
 	hud.get_node("GameOver").visible = true
@@ -76,6 +80,8 @@ func _initialize() -> void:
 	main._unhandled_input(restart_key)
 	assert(score_label.text != "낡은 값", "재시작하면 점수 표시를 새로 그려야 한다")
 	assert(not hud.get_node("GameOver").visible, "재시작하면 게임 종료 표시가 사라져야 한다")
+	assert(is_equal_approx(gauge_bar.size.x, 0.0),
+		"재시작하면 층 게이지도 비워야 한다: %f" % gauge_bar.size.x)
 
 	for _i in 300:
 		game.step(0.05)

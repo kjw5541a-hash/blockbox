@@ -15,8 +15,13 @@ func _ready() -> void:
 		var back := ColorRect.new()
 		back.color = EMPTY_COLOR
 		back.custom_minimum_size = Vector2(48, BAR_HEIGHT)
+		# 게이지는 정보 표시일 뿐이다. 기본값 STOP 이면 게이지 위에서 시작한
+		# 스와이프를 막대가 삼켜 조각이 움직이지 않는다. 부모의 IGNORE 는
+		# 자식에게 상속되지 않으므로 막대마다 직접 꺼 준다.
+		back.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var fill := ColorRect.new()
 		fill.color = FILL_COLOR
+		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		# back 은 VBoxContainer 가 배치하지만 fill 은 컨테이너의 자식이 아니므로
 		# 크기를 직접 정할 수 있다.
 		fill.position = Vector2.ZERO

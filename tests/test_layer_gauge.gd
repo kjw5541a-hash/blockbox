@@ -52,6 +52,14 @@ func _test_bar_width_and_color_track_fill() -> void:
 		"꽉 찬 층은 막대가 끝까지 차야 한다: %f" % bar.size.x)
 	assert(bar.color == gauge.NEAR_COLOR, "꽉 찬 층도 경고색 그대로여야 한다")
 
+	# 막대는 정보 표시일 뿐이라 스와이프를 삼키면 안 된다. 부모에만 IGNORE 를
+	# 걸면 자식 ColorRect 가 기본값 STOP 으로 남아 게이지 위 드래그가 죽는다.
+	for b in gauge._bars:
+		assert(b.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+			"채움 막대가 입력을 삼키면 안 된다")
+		assert(b.get_parent().mouse_filter == Control.MOUSE_FILTER_IGNORE,
+			"배경 막대가 입력을 삼키면 안 된다")
+
 	# 다른 모든 층(y=1..HEIGHT-1)은 비어 있으니 폭이 0이어야 하고, HEIGHT 개
 	# 층 전부를 refresh 가 범위 밖 y 없이 훑고 지나갔다는 뜻이다.
 	for i in Board.HEIGHT - 1:
