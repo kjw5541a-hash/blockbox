@@ -3,6 +3,8 @@ extends Control
 func _ready() -> void:
 	$Center/Menu/Start.pressed.connect(_on_start)
 	$Center/Menu/Best.text = "최고 기록 %d" % SaveData.load_high_score()
+	# 폰에서 캐시된 옛 빌드를 보고 있는 건 아닌지 눈으로 확인할 수 있게 찍어 둔다.
+	$Center/Menu/Version.text = version()
 
 func _on_start() -> void:
 	GameConfig.size = GameConfig.SIZES[_selected($Center/Menu/Sizes)]
@@ -11,6 +13,10 @@ func _on_start() -> void:
 	# Board 의 크기를 읽어 뷰를 만들고, 자식 _ready 는 부모보다 먼저 돈다.
 	GameConfig.apply()
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+# 배포 워크플로가 project.godot 의 config/version 을 덮어쓴다.
+func version() -> String:
+	return "버전 %s" % ProjectSettings.get_setting("application/config/version", "dev")
 
 # 눌린 버튼이 줄 안에서 몇 번째인지가 곧 선택 값이다.
 func _selected(row: Container) -> int:

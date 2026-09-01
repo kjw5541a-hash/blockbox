@@ -3,7 +3,7 @@ extends SceneTree
 func _initialize() -> void:
 	_test_apply_sets_board()
 	_test_kinds_and_gravity()
-	_test_start_scene_rows()
+	await _test_start_scene_rows()
 	await _test_main_scene_uses_chosen_size()
 	print("test_game_config: OK")
 	quit()
@@ -60,6 +60,9 @@ func _test_start_scene_rows() -> void:
 	# class_name 이 없는 스크립트라 정적 타입을 주면 멤버를 못 찾는다.
 	var menu = load("res://scenes/start.tscn").instantiate()
 	root.add_child(menu)
+	# _ready() 는 트리에 들어간 다음 프레임에 불린다. 기다리지 않으면 씬 파일에
+	# 박힌 초기값만 보게 되어, 스크립트가 채우는 값은 검사되지 않는다.
+	await process_frame
 	var sizes: Container = menu.get_node("Center/Menu/Sizes")
 	var diff: Container = menu.get_node("Center/Menu/Difficulty")
 	assert(sizes.get_child_count() == GameConfig.SIZES.size(),
@@ -76,6 +79,13 @@ func _test_start_scene_rows() -> void:
 	(sizes.get_child(2) as Button).button_pressed = true
 	assert(menu._selected(sizes) == 2, "눌린 버튼의 자리 번호가 선택 값이다")
 	assert(not (sizes.get_child(0) as Button).button_pressed, "같은 줄의 다른 선택은 풀려야 한다")
+
+	# 폰에서 캐시된 옛 빌드를 보고 있는 건 아닌지 구별하려면 버전이 화면에 떠야 한다.
+	# 배포 워크플로가 config/version 을 날짜와 커밋 해시로 덮어쓴다.
+	var ver: String = str(ProjectSettings.get_setting("application/config/version", ""))
+	assert(ver != "", "application/config/version 이 비어 있으면 표시할 것이 없다")
+	var label: Label = menu.get_node("Center/Menu/Version")
+	assert(label.text.contains(ver), "시작 화면에 버전 %s 가 떠야 한다: '%s'" % [ver, label.text])
 	menu.queue_free()
 
 
