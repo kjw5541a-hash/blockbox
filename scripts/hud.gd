@@ -18,6 +18,7 @@ func setup(g: Game, r: CameraRig) -> void:
 	# 견본이 한 박자 늦어 "지금 내려오는 조각" 색을 보여준다.
 	game.piece_moved.connect(_refresh_next)
 	game.game_over.connect(_on_game_over)
+	$GameOver.visible = false
 	_refresh_score()
 	_refresh_next()
 	$LayerGauge.setup(game)
@@ -36,9 +37,12 @@ func _tilt_away() -> void:
 	game.rotate(a[0], a[1])
 
 func _refresh_score() -> void:
-	$Top/Score.text = "점수 %d   레벨 %d" % [game.score, game.level]
+	$Top/Score.text = "점수 %d   레벨 %d   최고 %d" % [
+		game.score, game.level, SaveData.load_high_score()]
 
 func _on_game_over() -> void:
+	var best := SaveData.submit(game.score)
+	$GameOver.text = "게임 종료\n점수 %d   최고 %d\nR 로 다시 시작" % [game.score, best]
 	$GameOver.visible = true
 
 # 재시작할 때 이전 판의 점수와 미리보기가 남지 않도록 전부 새로 그린다.
