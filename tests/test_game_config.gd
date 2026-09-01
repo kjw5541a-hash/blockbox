@@ -4,6 +4,7 @@ func _initialize() -> void:
 	_test_apply_sets_board()
 	_test_kinds_and_gravity()
 	_test_start_scene_rows()
+	await _test_main_scene_uses_chosen_size()
 	print("test_game_config: OK")
 	quit()
 
@@ -76,3 +77,41 @@ func _test_start_scene_rows() -> void:
 	assert(menu._selected(sizes) == 2, "눌린 버튼의 자리 번호가 선택 값이다")
 	assert(not (sizes.get_child(0) as Button).button_pressed, "같은 줄의 다른 선택은 풀려야 한다")
 	menu.queue_free()
+
+
+# 통 크기는 뷰 세 곳(BoardView / BoxFrame / LayerGauge)이 각자 Board 를 읽어
+# 만들어 쓴다. 크기를 바꾼 뒤 씬을 통째로 띄워, 실제로 6x6 통이 서는지 본다.
+func _test_main_scene_uses_chosen_size() -> void:
+	GameConfig.size = 6
+	GameConfig.difficulty = GameConfig.EASY
+	GameConfig.apply()
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+
+	var game: Game = main.game
+	assert(game.board.cells.size() == 6 * 6 * Board.HEIGHT,
+		"보드가 6x6 이어야 한다: %d 칸" % game.board.cells.size())
+	assert(main.rig.position == Vector3(2.5, (Board.HEIGHT - 1) * 0.5, 2.5),
+		"카메라가 통 한가운데를 봐야 한다: %s" % main.rig.position)
+	var board_view: MultiMeshInstance3D = main.board_view
+	assert(board_view.multimesh.instance_count == 6 * 6 * Board.HEIGHT,
+		"보드 뷰가 모든 칸을 그릴 수 있어야 한다: %d" % board_view.multimesh.instance_count)
+
+	# 통이 커져도 화면 안에 들어와야 하고, 좌우에 시점 회전용 여백이 남아야 한다.
+	var rect: Rect2 = main.touch_input.box_screen_rect()
+	var view: Vector2 = main.get_viewport().get_visible_rect().size
+	assert(rect.position.x > 40.0 and rect.end.x < view.x - 40.0,
+		"6x6 통 좌우에 시점 회전용 여백이 남아야 한다: %s / 화면 %s" % [rect, view])
+	assert(rect.position.y > 0.0 and rect.end.y < view.y,
+		"6x6 통이 화면 위아래로 잘리면 안 된다: %s / 화면 %s" % [rect, view])
+
+	# 쉬움이라 저절로 내려오지 않는다. 내리기로 잠근 뒤 뷰에 반영되는지 본다.
+	game.hard_drop()
+	assert(board_view.multimesh.visible_instance_count == 4,
+		"잠긴 4칸이 보드 뷰에 나와야 한다: %d" % board_view.multimesh.visible_instance_count)
+	var gauge := main.get_node("HUD/LayerGauge")
+	assert(gauge._bars.size() == Board.HEIGHT, "층 게이지 막대는 층마다 하나")
+
+	main.queue_free()
+	_restore()
