@@ -61,9 +61,27 @@ func _initialize() -> void:
 
 	# 잠긴 조각이 보드 뷰에 반영되어야 한다.
 	var board_view: MultiMeshInstance3D = main.board_view
+	var locked_kind: int = game.current.kind
+	var falling_mat := (piece_view.get_child(0) as MeshInstance3D).material_override as StandardMaterial3D
+	var falling_albedo := falling_mat.albedo_color
 	game.hard_drop()
 	assert(board_view.multimesh.visible_instance_count == 4,
 		"잠긴 4칸이 보드 뷰에 나와야 한다: %d" % board_view.multimesh.visible_instance_count)
+
+	# 조각이 잠기는 순간 색이 튀면 안 된다. 떨어지는 조각은 albedo_color 로,
+	# 잠긴 칸은 MultiMesh 인스턴스 색(정점 색)으로 그려진다. 두 경로가 같은 값을
+	# 넣는 것만으로는 부족하다 — albedo_color 는 sRGB 로 해석되므로 정점 색도
+	# 같게 읽어야 한다. 아니면 잠기는 순간 같은 색이 밝은 쪽으로 튄다.
+	#
+	# 인스턴스 색을 되읽어 비교하지는 못한다. headless 렌더 서버는
+	# get_instance_color 로 항상 검정을 준다 — 값이 아니라 배선만 확인한다.
+	var want := BlockColors.of(locked_kind)
+	assert(Vector3(falling_albedo.r, falling_albedo.g, falling_albedo.b).is_equal_approx(
+		Vector3(want.r, want.g, want.b)),
+		"떨어지는 %d 번 조각 색이 색표와 다르다: %s" % [locked_kind, falling_albedo])
+	var board_mat := board_view.multimesh.mesh.material as StandardMaterial3D
+	assert(board_mat.vertex_color_is_srgb,
+		"정점 색을 선형으로 읽으면 albedo_color 쪽보다 밝게 나와 잠길 때 색이 튄다")
 
 	# HUD 가 게임 상태를 실제로 따라가는지 확인한다.
 	var hud: CanvasLayer = main.get_node("HUD")

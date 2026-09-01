@@ -18,6 +18,14 @@ window/handheld/orientation=1
 
 renderer/rendering_method="forward_plus"
 
+[gui]
+
+; 웹에는 시스템 폰트가 없고 Godot 내장 폰트에는 한글 글리프가 없다.
+; 폰트를 지정하지 않으면 아이폰 사파리에서 한글이 전부 깨진다.
+theme/custom_font="res://assets/fonts/NotoSansKR-subset.ttf"
+; 720x1280 뷰포트가 폰 화면 폭으로 줄어드므로 기본 16 은 읽을 수 없다.
+theme/default_font_size=36
+
 [input_devices]
 
 ; 데스크톱에는 InputEventScreenDrag 가 없다. 이게 없으면 스와이프 조작 전체가

@@ -21,10 +21,11 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="Menu" type="VBoxContainer" parent="Center"]
-custom_minimum_size = Vector2(560, 0)
+custom_minimum_size = Vector2(640, 0)
 theme_override_constants/separation = 20
 
 [node name="Title" type="Label" parent="Center/Menu"]
+theme_override_font_sizes/font_size = 72
 horizontal_alignment = 1
 text = "blockbox"
 
@@ -39,7 +40,7 @@ text = "통 크기"
 [node name="Sizes" type="HBoxContainer" parent="Center/Menu"]
 
 [node name="S4" type="Button" parent="Center/Menu/Sizes"]
-custom_minimum_size = Vector2(0, 88)
+custom_minimum_size = Vector2(0, 100)
 size_flags_horizontal = 3
 focus_mode = 0
 toggle_mode = true
@@ -48,7 +49,7 @@ button_group = SubResource("SizeGroup")
 text = "4 × 4"
 
 [node name="S5" type="Button" parent="Center/Menu/Sizes"]
-custom_minimum_size = Vector2(0, 88)
+custom_minimum_size = Vector2(0, 100)
 size_flags_horizontal = 3
 focus_mode = 0
 toggle_mode = true
@@ -56,7 +57,7 @@ button_group = SubResource("SizeGroup")
 text = "5 × 5"
 
 [node name="S6" type="Button" parent="Center/Menu/Sizes"]
-custom_minimum_size = Vector2(0, 88)
+custom_minimum_size = Vector2(0, 100)
 size_flags_horizontal = 3
 focus_mode = 0
 toggle_mode = true
@@ -70,7 +71,7 @@ text = "난이도"
 [node name="Difficulty" type="HBoxContainer" parent="Center/Menu"]
 
 [node name="Easy" type="Button" parent="Center/Menu/Difficulty"]
-custom_minimum_size = Vector2(0, 88)
+custom_minimum_size = Vector2(0, 100)
 size_flags_horizontal = 3
 focus_mode = 0
 toggle_mode = true
@@ -78,7 +79,7 @@ button_group = SubResource("DiffGroup")
 text = "쉬움"
 
 [node name="Normal" type="Button" parent="Center/Menu/Difficulty"]
-custom_minimum_size = Vector2(0, 88)
+custom_minimum_size = Vector2(0, 100)
 size_flags_horizontal = 3
 focus_mode = 0
 toggle_mode = true
@@ -87,7 +88,7 @@ button_group = SubResource("DiffGroup")
 text = "보통"
 
 [node name="Hard" type="Button" parent="Center/Menu/Difficulty"]
-custom_minimum_size = Vector2(0, 88)
+custom_minimum_size = Vector2(0, 100)
 size_flags_horizontal = 3
 focus_mode = 0
 toggle_mode = true
@@ -95,10 +96,13 @@ button_group = SubResource("DiffGroup")
 text = "어려움"
 
 [node name="Hint" type="Label" parent="Center/Menu"]
+theme_override_font_sizes/font_size = 26
 horizontal_alignment = 1
+autowrap_mode = 3
 text = "쉬움: 저절로 내려오지 않음 · 어려움: 비평면 조각 포함"
 
 [node name="Start" type="Button" parent="Center/Menu"]
-custom_minimum_size = Vector2(0, 104)
+custom_minimum_size = Vector2(0, 120)
 focus_mode = 0
+theme_override_font_sizes/font_size = 44
 text = "시작"

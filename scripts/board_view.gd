@@ -16,6 +16,11 @@ func _ready() -> void:
 
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
+	# MultiMesh 인스턴스 색은 정점 색으로 들어가는데, 기본값은 그 값을 이미
+	# 선형 공간이라고 보고 변환 없이 쓴다. 반면 떨어지는 조각(PieceView)은
+	# albedo_color 로 색을 넣고 그쪽은 sRGB 로 간주해 변환된다. 그래서 이걸
+	# 켜지 않으면 같은 색인데도 조각이 잠기는 순간 밝기가 튄다.
+	mat.vertex_color_is_srgb = true
 	mesh.material = mat
 
 	multimesh = MultiMesh.new()
