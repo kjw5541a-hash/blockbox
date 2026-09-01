@@ -3,6 +3,7 @@ extends SceneTree
 # 조작 매핑은 실제 카메라 투영에 달려 있다. 가짜 리그로는 "손가락을 따라가는지"를
 # 확인할 수 없으므로 씬을 통째로 띄우고 Camera3D 의 투영을 직접 읽는다.
 func _initialize() -> void:
+	await _test_drag_along_an_axis_moves_that_axis()
 	await _test_piece_follows_finger()
 	await _test_view_turns_only_outside_the_box()
 	await _test_end_drag_resets_accumulator()
@@ -23,8 +24,40 @@ func _face_yaw(rig: CameraRig, step: int) -> void:
 
 # 회귀 테스트: 예전에는 화면에서 우세한 축 하나만 골랐다. 쿼터뷰에서는 두 수평
 # 격자축이 모두 화면 오른쪽을 향하므로, 오른쪽 위로 끌면 조각이 오른쪽 아래로
-# 갔다 — 손가락과 반대 사분면이다. 어떤 시점, 어떤 방향으로 끌어도 조각의 화면
-# 이동이 손가락과 같은 쪽이어야 한다.
+# 갔다 — 손가락과 반대 사분면이다.
+#
+# 여기서는 격자축의 화면 방향(axis_screen)만 근거로 삼는다. 그 방향으로 1.5칸만큼
+# 끌면 정확히 그 축으로 한 칸이어야 한다. 우세축 방식은 두 축이 모두 오른쪽을
+# 향하는 탓에 이 단언을 통과할 수 없다.
+func _test_drag_along_an_axis_moves_that_axis() -> void:
+	var main: Node = await _main()
+	var game: Game = main.game
+	var rig: CameraRig = main.rig
+	var input: TouchInput = main.touch_input
+	for s in 4:
+		_face_yaw(rig, s)
+		await process_frame
+		var away := rig.axis_away()
+		var right := rig.axis_right()
+		# 대각선까지 포함해 다섯 가지. 4x4 통 한가운데의 O 조각은 어느 쪽으로든
+		# 정확히 한 칸 여유가 있으므로 벽에 막혀 흐려지는 일이 없다.
+		var cases: Array[Vector3i] = [
+			away, -away, right, -right, away + right,
+		]
+		for want in cases:
+			var drag := Vector2.ZERO
+			for axis in [away, right]:
+				var n: int = _component(want, axis)
+				drag += input.axis_screen(axis) * float(n)
+			var before := _center_o(game)
+			input.begin_drag(input.box_screen_rect().get_center())
+			input.feed_drag(drag * 1.5)
+			var moved: Vector3i = game.current.origin - before
+			assert(moved == want,
+				"yaw %d: 화면에서 %s 방향으로 1.5칸 끌었는데 %s 로 갔다" % [s, want, moved])
+	main.queue_free()
+
+# 어떤 방향으로 끌어도 조각의 화면 이동이 손가락과 같은 쪽이어야 한다.
 func _test_piece_follows_finger() -> void:
 	var main: Node = await _main()
 	var game: Game = main.game
@@ -40,10 +73,8 @@ func _test_piece_follows_finger() -> void:
 		_face_yaw(rig, s)
 		await process_frame
 		for d in drags:
-			# 매번 한가운데의 O 조각으로 되돌린다. 2x2 라 어느 쪽으로도 한 칸은 간다.
-			game.current = Piece.create(2)
-			game.current.origin = game.spawn_origin_for(game.current)
-			var before := cam.unproject_position(Vector3(game.current.origin))
+			var origin := _center_o(game)
+			var before := cam.unproject_position(Vector3(origin))
 			input.begin_drag(input.box_screen_rect().get_center())
 			input.feed_drag(d * 200.0)
 			var moved := cam.unproject_position(Vector3(game.current.origin)) - before
@@ -52,6 +83,16 @@ func _test_piece_follows_finger() -> void:
 			assert(moved.dot(d) > 0.0,
 				"yaw %d: 손가락 %s 로 끌었는데 조각이 화면에서 %s 로 갔다" % [s, d, moved])
 	main.queue_free()
+
+# 통 한가운데의 O 조각으로 되돌리고 그 원점을 준다.
+func _center_o(game: Game) -> Vector3i:
+	game.current = Piece.create(2)
+	game.current.origin = game.spawn_origin_for(game.current)
+	return game.current.origin
+
+# 단위 축 벡터 방향의 성분. 축은 ±X 나 ±Z 중 하나다.
+func _component(v: Vector3i, axis: Vector3i) -> int:
+	return v.x * axis.x + v.z * axis.z
 
 func _test_view_turns_only_outside_the_box() -> void:
 	var main: Node = await _main()
