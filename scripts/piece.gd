@@ -5,6 +5,9 @@ const AXIS_X := 0
 const AXIS_Y := 1
 const AXIS_Z := 2
 
+# 이 번호 이하가 평면 조각이다. 난이도에 따라 조각 종류를 잘라 쓴다.
+const PLANAR_MAX := 5
+
 # 크기 4 폴리큐브 중 평면 조각 5종. XZ 평면에 눕혀서 정의한다.
 # 3D 회전에서는 거울상이 서로 겹치므로 2D의 S/Z와 J/L은 각각 한 종으로 합쳐진다.
 const SHAPES := {

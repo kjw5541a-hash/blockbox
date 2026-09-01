@@ -64,7 +64,7 @@ func start(rng_seed: int = 0) -> void:
 
 func _draw_kind() -> int:
 	if _bag.is_empty():
-		for k in Piece.SHAPES.keys():
+		for k in GameConfig.kinds():
 			_bag.append(k)
 		_bag.shuffle()
 	return _bag.pop_back()
@@ -128,6 +128,9 @@ func _on_piece_changed() -> void:
 
 func step(delta: float) -> void:
 	if is_over or current == null:
+		return
+	# 쉬움에서는 중력도 잠금 지연도 없다. 내리기(hard_drop)만이 조각을 잠근다.
+	if not GameConfig.gravity():
 		return
 	if not _grounded:
 		_grounded = not _can_fall()

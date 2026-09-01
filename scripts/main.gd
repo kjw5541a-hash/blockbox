@@ -7,6 +7,9 @@ extends Node3D
 @onready var touch_input := $TouchInput
 
 func _ready() -> void:
+	# 통 크기는 시작 화면에서 정해진다. 카메라를 통의 한가운데로 옮겨 맞춘다.
+	rig.position = Vector3(
+		(Board.WIDTH - 1) * 0.5, (Board.HEIGHT - 1) * 0.5, (Board.DEPTH - 1) * 0.5)
 	board_view.setup(game)
 	piece_view.setup(game)
 	touch_input.setup(game, rig)
@@ -17,6 +20,7 @@ func _process(delta: float) -> void:
 	game.step(delta)
 
 # 개발용 키보드 조작. 터치를 붙인 뒤에도 디버깅용으로 남긴다.
+# 회전 키는 HUD 버튼과 같은 화면 기준 축을 쓴다.
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
@@ -32,13 +36,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_SPACE:
 			game.hard_drop()
 		KEY_Z:
-			game.rotate(Piece.AXIS_Y, -1)
+			var a: Array = rig.tilt_axis(rig.axis_right())
+			game.rotate(a[0], a[1])
 		KEY_X:
 			game.rotate(Piece.AXIS_Y, 1)
 		KEY_C:
-			var a: Array = rig.tilt_axis(rig.axis_right())
-			game.rotate(a[0], a[1])
-		KEY_V:
 			var a: Array = rig.tilt_axis(rig.axis_away())
 			game.rotate(a[0], a[1])
 		KEY_Q:
@@ -53,3 +55,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			board_view.refresh()
 			piece_view.refresh()
 			$HUD.restart()
+		KEY_ESCAPE:
+			SaveData.submit(game.score)
+			get_tree().change_scene_to_file("res://scenes/start.tscn")

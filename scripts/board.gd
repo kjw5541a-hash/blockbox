@@ -1,19 +1,29 @@
 class_name Board
 extends RefCounted
 
-const WIDTH := 4
-const DEPTH := 4
+# 가로/세로는 시작 화면에서 고른다. 상수가 아니라 정적 변수인 이유는
+# 뷰(BoardView, BoxFrame, LayerGauge)가 전부 Board.WIDTH 를 직접 읽기 때문이다.
+# 한 번에 한 판만 돌아가므로 전역 하나로 충분하다. 반드시 씬을 띄우기 전에
+# GameConfig.apply() 로 맞춰 놓아야 한다.
+static var WIDTH := 4
+static var DEPTH := 4
 const HEIGHT := 14
-const LAYER_CELLS := WIDTH * DEPTH
+static var LAYER_CELLS := WIDTH * DEPTH
 
-# 튜닝 손잡이: 층 클리어에 필요한 칸 수. 클리어가 너무 안 나오면 낮춘다.
-const LAYER_CLEAR_THRESHOLD := 16
+# 튜닝 손잡이: 층 클리어에 필요한 칸 수. GameConfig 가 난이도에 맞춰 넣는다.
+static var LAYER_CLEAR_THRESHOLD := 16
 
 var cells := PackedInt32Array()
 
 func _init() -> void:
 	cells.resize(WIDTH * DEPTH * HEIGHT)
 	cells.fill(0)
+
+static func resize(w: int, d: int, threshold: int) -> void:
+	WIDTH = w
+	DEPTH = d
+	LAYER_CELLS = w * d
+	LAYER_CLEAR_THRESHOLD = threshold
 
 static func index(x: int, y: int, z: int) -> int:
 	return y * LAYER_CELLS + z * WIDTH + x

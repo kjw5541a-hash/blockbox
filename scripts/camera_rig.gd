@@ -16,7 +16,9 @@ const RIGHT: Array[Vector3i] = [
 ]
 
 const YAW_BASE_DEG := 45.0
-const PITCH_DEG := -30.0
+# -30 도에서는 두 수평 격자축이 화면에서 ±27 도로만 벌어져 위/옆 구분이 안 된다.
+# -45 도면 ±35 도로 벌어지고, 통 위아래 여백도 늘어 통 바깥 스와이프가 편해진다.
+const PITCH_DEG := -45.0
 const TURN_TIME := 0.25
 
 var yaw_step := 0

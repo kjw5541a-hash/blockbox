@@ -27,6 +27,8 @@ func _initialize() -> void:
 	_test_level_rises()
 	_test_footprint_is_deduplicated()
 	_test_footprint_exact_set_for_flat_t()
+	_test_easy_has_no_gravity()
+	_test_easy_draws_planar_pieces_only()
 	print("test_game: OK")
 	quit()
 
@@ -360,3 +362,37 @@ func _test_footprint_exact_set_for_flat_t() -> void:
 	assert(fp.size() == want.size(), "발자국 칸 수가 기대와 다르다: %d" % fp.size())
 	for w in want:
 		assert(fp.has(w), "발자국에 %s 가 없어야 할 칸이 빠졌다" % w)
+
+
+# 쉬움은 조각이 저절로 내려오지 않는다. 시간이 아무리 흘러도 제자리여야 하고,
+# 내리기를 눌렀을 때만 잠긴다.
+func _test_easy_has_no_gravity() -> void:
+	GameConfig.difficulty = GameConfig.EASY
+	var g := _make_game()
+	g.start(7)
+	var before: Vector3i = g.current.origin
+	for _i in 100:
+		g.step(1.0)
+	assert(g.current.origin == before,
+		"쉬움에서는 조각이 저절로 내려오면 안 된다: %s" % g.current.origin)
+	assert(g.board.layer_fill_count(0) == 0, "쉬움에서는 시간만으로 잠기면 안 된다")
+	g.hard_drop()
+	assert(g.board.layer_fill_count(0) > 0, "쉬움에서도 내리기를 누르면 잠겨야 한다")
+	GameConfig.difficulty = GameConfig.HARD
+
+func _test_easy_draws_planar_pieces_only() -> void:
+	GameConfig.difficulty = GameConfig.EASY
+	var g := _make_game()
+	g.start(3)
+	assert(g.next_kind <= Piece.PLANAR_MAX, "쉬움의 첫 조각부터 평면이어야 한다")
+	for _i in 60:
+		var k := g._draw_kind()
+		assert(k <= Piece.PLANAR_MAX, "쉬움에 비평면 조각 %d 가 나왔다" % k)
+	GameConfig.difficulty = GameConfig.HARD
+	var h := _make_game()
+	h.start(3)
+	var seen := {}
+	for _i in 200:
+		seen[h._draw_kind()] = true
+	assert(seen.size() == Piece.SHAPES.size(),
+		"어려움에서는 모든 조각이 나와야 한다: %d 종" % seen.size())

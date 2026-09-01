@@ -6,13 +6,10 @@ var rig: CameraRig = null
 func setup(g: Game, r: CameraRig) -> void:
 	game = g
 	rig = r
-	$Bottom/RotateCCW.pressed.connect(func() -> void: game.rotate(Piece.AXIS_Y, -1))
-	$Bottom/RotateCW.pressed.connect(func() -> void: game.rotate(Piece.AXIS_Y, 1))
-	$Bottom/TiltRight.pressed.connect(_tilt_right)
-	$Bottom/TiltAway.pressed.connect(_tilt_away)
+	$Bottom/RotateX.pressed.connect(_rotate_x)
+	$Bottom/RotateY.pressed.connect(func() -> void: game.rotate(Piece.AXIS_Y, 1))
+	$Bottom/RotateZ.pressed.connect(_rotate_z)
 	$Bottom/Drop.pressed.connect(func() -> void: game.hard_drop())
-	$Top/TurnLeft.pressed.connect(func() -> void: rig.turn(-1))
-	$Top/TurnRight.pressed.connect(func() -> void: rig.turn(1))
 	game.layers_cleared.connect(func(_n: int) -> void: _refresh_score())
 	# next_kind 은 _spawn 끝에서야 다음 값으로 넘어간다. piece_locked 에 물리면
 	# 견본이 한 박자 늦어 "지금 내려오는 조각" 색을 보여준다.
@@ -28,11 +25,13 @@ func setup(g: Game, r: CameraRig) -> void:
 func _refresh_next() -> void:
 	$Top/NextSwatch.color = BlockColors.of(game.next_kind)
 
-func _tilt_right() -> void:
+# 회전 축은 화면 기준이다. X 는 화면 가로축, Y 는 화면 세로축(항상 월드 Y),
+# Z 는 화면 안팎축. 시점을 돌리면 X 와 Z 가 가리키는 격자축도 같이 따라간다.
+func _rotate_x() -> void:
 	var a: Array = rig.tilt_axis(rig.axis_right())
 	game.rotate(a[0], a[1])
 
-func _tilt_away() -> void:
+func _rotate_z() -> void:
 	var a: Array = rig.tilt_axis(rig.axis_away())
 	game.rotate(a[0], a[1])
 
@@ -42,7 +41,7 @@ func _refresh_score() -> void:
 
 func _on_game_over() -> void:
 	var best := SaveData.submit(game.score)
-	$GameOver.text = "게임 종료\n점수 %d   최고 %d\nR 로 다시 시작" % [game.score, best]
+	$GameOver.text = "게임 종료\n점수 %d   최고 %d\nR 다시 시작 · ESC 처음으로" % [game.score, best]
 	$GameOver.visible = true
 	_refresh_score()  # 방금 갱신된 최고 기록을 상단 표시에도 반영한다
 

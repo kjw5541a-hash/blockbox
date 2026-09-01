@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game.gd" id="2"]
@@ -9,8 +9,18 @@
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="7"]
 [ext_resource type="Script" path="res://scripts/box_frame.gd" id="8"]
 
+[sub_resource type="Environment" id="Env"]
+background_mode = 1
+background_color = Color(0.05, 0.06, 0.09, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.55, 0.6, 0.75, 1)
+ambient_light_energy = 0.5
+
 [node name="Main" type="Node3D"]
 script = ExtResource("1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env")
 
 [node name="Game" type="Node" parent="."]
 script = ExtResource("2")
@@ -22,7 +32,7 @@ script = ExtResource("3")
 script = ExtResource("4")
 
 [node name="CameraRig" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 7, 1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 6.5, 1.5)
 script = ExtResource("5")
 
 [node name="Camera3D" type="Camera3D" parent="CameraRig"]
@@ -30,11 +40,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 24)
 projection = 1
 size = 20.0
 
+[node name="Sun" type="DirectionalLight3D" parent="CameraRig"]
+transform = Transform3D(0.9063, 0, -0.4226, -0.2113, 0.866, -0.4532, 0.366, 0.5, 0.7849, 0, 0, 0)
+
 [node name="TouchInput" type="Node" parent="."]
 script = ExtResource("6")
-
-[node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.86, -0.35, 0.37, 0, 0.72, 0.69, -0.5, -0.6, 0.63, 0, 20, 0)
 
 [node name="HUD" parent="." instance=ExtResource("7")]
 
