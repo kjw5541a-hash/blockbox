@@ -1,10 +1,8 @@
 name: Deploy to Pages
 
-# 코드가 blockbox-impl 에 있으므로 이 브랜치 푸시로 돈다.
-# main 에 병합하면 branches 목록에 main 을 추가할 것.
 on:
   push:
-    branches: [blockbox-impl]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
