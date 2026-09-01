@@ -62,6 +62,21 @@ func _initialize() -> void:
 	assert(board_view.multimesh.visible_instance_count == 4,
 		"잠긴 4칸이 보드 뷰에 나와야 한다: %d" % board_view.multimesh.visible_instance_count)
 
+	# HUD 가 게임 상태를 실제로 따라가는지 확인한다.
+	var hud: CanvasLayer = main.get_node("HUD")
+	assert(hud.get_node("Top/NextSwatch").color == BlockColors.of(game.next_kind),
+		"다음 조각 색 견본이 실제 next_kind 와 어긋난다")
+
+	var score_label: Label = hud.get_node("Top/Score")
+	score_label.text = "낡은 값"
+	hud.get_node("GameOver").visible = true
+	var restart_key := InputEventKey.new()
+	restart_key.keycode = KEY_R
+	restart_key.pressed = true
+	main._unhandled_input(restart_key)
+	assert(score_label.text != "낡은 값", "재시작하면 점수 표시를 새로 그려야 한다")
+	assert(not hud.get_node("GameOver").visible, "재시작하면 게임 종료 표시가 사라져야 한다")
+
 	for _i in 300:
 		game.step(0.05)
 		await process_frame

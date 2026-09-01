@@ -49,4 +49,4 @@ func _unhandled_input(event: InputEvent) -> void:
 			game.start()
 			board_view.refresh()
 			piece_view.refresh()
-			$HUD/GameOver.visible = false
+			$HUD.restart()

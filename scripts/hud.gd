@@ -14,7 +14,9 @@ func setup(g: Game, r: CameraRig) -> void:
 	$Top/TurnLeft.pressed.connect(func() -> void: rig.turn(-1))
 	$Top/TurnRight.pressed.connect(func() -> void: rig.turn(1))
 	game.layers_cleared.connect(func(_n: int) -> void: _refresh_score())
-	game.piece_locked.connect(_refresh_next)
+	# next_kind 은 _spawn 끝에서야 다음 값으로 넘어간다. piece_locked 에 물리면
+	# 견본이 한 박자 늦어 "지금 내려오는 조각" 색을 보여준다.
+	game.piece_moved.connect(_refresh_next)
 	game.game_over.connect(_on_game_over)
 	_refresh_score()
 	_refresh_next()
@@ -37,3 +39,9 @@ func _refresh_score() -> void:
 
 func _on_game_over() -> void:
 	$GameOver.visible = true
+
+# 재시작할 때 이전 판의 점수와 미리보기가 남지 않도록 전부 새로 그린다.
+func restart() -> void:
+	$GameOver.visible = false
+	_refresh_score()
+	_refresh_next()
