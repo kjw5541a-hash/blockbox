@@ -93,13 +93,21 @@ func _initialize() -> void:
 		game.hard_drop()
 		await process_frame
 	assert(game.is_over, "조각을 400번 떨어뜨리면 판이 끝나야 한다")
-	var final_score: int = game.score
 	assert(hud.get_node("GameOver").visible, "게임이 끝나면 종료 표시가 떠야 한다")
-	assert(SaveData.load_high_score() >= final_score,
-		"게임오버 시 점수가 기록에 남아야 한다: 최고 %d, 이번 %d"
-		% [SaveData.load_high_score(), final_score])
 
+	# 무작위로 떨어뜨린 판은 점수가 0 이라 그대로 두면 "0 이상"이라는 빈 단언이 된다.
+	# 점수를 넣고 종료 신호를 다시 울려 기록 저장 배선을 확인한다.
+	game.score = 5000
+	game.game_over.emit()
+	assert(SaveData.load_high_score() == 5000,
+		"게임오버 시 점수가 기록에 남아야 한다: 최고 %d" % SaveData.load_high_score())
+
+	# R 로 재시작할 때도 이번 판 점수가 기록에 남아야 한다.
+	game.is_over = false
+	game.score = 9000
 	main._unhandled_input(restart_key)
+	assert(SaveData.load_high_score() == 9000,
+		"R 재시작 전에 점수를 기록에 남겨야 한다: 최고 %d" % SaveData.load_high_score())
 	assert(not game.is_over and game.current != null, "게임오버 뒤에도 R 로 다시 시작해야 한다")
 	assert(game.score == 0, "재시작하면 점수가 0")
 	assert(not hud.get_node("GameOver").visible, "재시작하면 종료 표시가 사라져야 한다")
