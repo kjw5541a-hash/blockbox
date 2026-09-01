@@ -17,3 +17,9 @@ window/handheld/orientation=1
 [rendering]
 
 renderer/rendering_method="forward_plus"
+
+[input_devices]
+
+; 데스크톱에는 InputEventScreenDrag 가 없다. 이게 없으면 스와이프 조작 전체가
+; 에디터/맥에서 죽은 코드가 된다.
+pointing/emulate_touch_from_mouse=true

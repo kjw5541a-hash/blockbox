@@ -15,11 +15,13 @@ func _initialize() -> void:
 	_test_hard_drop_lands_and_respawns()
 	_test_lock_delay_reset_limit()
 	_test_lock_reset_survives_reground()
+	_test_lock_timer_clears_when_piece_falls_again()
 	_test_ghost_matches_hard_drop()
 	_test_rotate_keeps_piece_inside()
 	_test_new_shapes_rotate_within_board()
 	_test_rotate_never_overlaps()
 	_test_kick_order_prefers_horizontal()
+	_test_every_kind_rotates_anywhere_on_empty_board()
 	_test_layer_clear_scores()
 	_test_multi_layer_bonus()
 	_test_level_rises()
@@ -124,6 +126,23 @@ func _test_lock_delay_reset_limit() -> void:
 		g.move(Vector3i(-1, 0, 0))
 	assert(locked[0] >= 1, "갱신 상한이 있으면 결국 잠겨야 한다")
 
+# 턱에서 미끄러져 내려오는 상황. 예산을 다 쓴 조각의 잠금 타이머가 남아 있으면
+# 다시 떨어진 뒤 착지하는 순간 곧바로 잠겨 버린다.
+func _test_lock_timer_clears_when_piece_falls_again() -> void:
+	var g := _make_game()
+	g.start(41)
+	var kind: int = g.current.kind
+	g._lock_resets = Game.MAX_LOCK_RESETS  # 예산 소진
+	g._lock_timer = Game.LOCK_DELAY - 0.01  # 잠기기 직전
+	g._grounded = false  # 턱에서 벗어나 다시 떨어지기 시작한 상태
+	g.step(g.fall_interval())
+	assert(g.current != null and g.current.kind == kind, "떨어지는 중에 잠기면 안 된다")
+	while g._can_fall():
+		g.step(g.fall_interval())
+	g.step(0.02)
+	assert(g.current != null and g.current.kind == kind,
+		"착지하자마자 잠기면 안 된다 — 다시 떨어진 조각은 잠금 지연을 새로 받아야 한다")
+
 func _test_ghost_matches_hard_drop() -> void:
 	var g := _make_game()
 	g.start(8)
@@ -211,12 +230,38 @@ func _test_kick_order_prefers_horizontal() -> void:
 		Vector3i.ZERO,
 		Vector3i(1, 0, 0), Vector3i(-1, 0, 0),
 		Vector3i(0, 0, 1), Vector3i(0, 0, -1),
-		Vector3i(0, -1, 0),
+		Vector3i(2, 0, 0), Vector3i(-2, 0, 0),
+		Vector3i(0, 0, 2), Vector3i(0, 0, -2),
+		Vector3i(3, 0, 0), Vector3i(-3, 0, 0),
+		Vector3i(0, 0, 3), Vector3i(0, 0, -3),
+		Vector3i(0, -1, 0), Vector3i(0, -2, 0), Vector3i(0, -3, 0),
 		Vector3i(0, 1, 0),
 	]
-	assert(Game.KICKS.size() == want.size(), "킥 후보는 7개")
+	assert(Game.KICKS.size() == want.size(), "킥 후보는 17개")
 	for i in want.size():
 		assert(Game.KICKS[i] == want[i], "킥 순서가 %d 번째에서 다르다" % i)
+
+# 빈 보드에서라면 어떤 조각이든, 보드 어느 자리에 있든 세 축 모두로 돌 수 있어야
+# 한다. 킥 범위가 좁으면 벽 근처나 바닥 근처에서 조각이 영영 안 돌아간다.
+func _test_every_kind_rotates_anywhere_on_empty_board() -> void:
+	for kind in Piece.SHAPES.keys():
+		for x in Board.WIDTH:
+			for z in Board.DEPTH:
+				for axis in [Piece.AXIS_X, Piece.AXIS_Y, Piece.AXIS_Z]:
+					var g := _make_game()
+					g.start(31)
+					g.current = Piece.create(kind)
+					g.current.origin = g.spawn_origin_for(g.current)
+					# 바닥까지 떨어뜨린 뒤 목표 (x, z) 로 최대한 밀어붙인다.
+					while g.move(Vector3i(0, -1, 0)):
+						pass
+					for _i in Board.WIDTH:
+						g.move(Vector3i(signi(x - g.current.origin.x), 0, 0))
+						g.move(Vector3i(0, 0, signi(z - g.current.origin.z)))
+					var at: Vector3i = g.current.origin
+					assert(g.rotate(axis, 1),
+						"조각 %d 이 %s 에서 축 %d 로 안 돌아간다" % [kind, at, axis])
+					g.free()
 
 func _test_layer_clear_scores() -> void:
 	var g := _make_game()

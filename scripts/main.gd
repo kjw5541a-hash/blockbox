@@ -46,6 +46,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_E:
 			rig.turn(1)
 		KEY_R:
+			# 게임오버 전에 눌러도 이번 판 점수는 기록에 남긴다.
+			SaveData.submit(game.score)
+			touch_input.end_drag()
 			game.start()
 			board_view.refresh()
 			piece_view.refresh()

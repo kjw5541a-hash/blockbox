@@ -3,6 +3,9 @@ extends SceneTree
 # 씬을 실제로 띄우고 몇 초 분량을 돌려, 렌더 코드가 게임 로직을 깨거나
 # 예외를 던지지 않는지 확인한다. 그림이 예쁜지는 사람이 본다.
 func _initialize() -> void:
+	# 사람의 실제 최고 기록 파일을 건드리지 않는다.
+	SaveData.PATH = "user://test_main_smoke.cfg"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveData.PATH))
 	var scene: PackedScene = load("res://scenes/main.tscn")
 	assert(scene != null, "main.tscn 을 불러올 수 없다")
 	var main: Node = scene.instantiate()
@@ -83,12 +86,25 @@ func _initialize() -> void:
 	assert(is_equal_approx(gauge_bar.size.x, 0.0),
 		"재시작하면 층 게이지도 비워야 한다: %f" % gauge_bar.size.x)
 
-	for _i in 300:
-		game.step(0.05)
-		await process_frame
+	# 진짜 게임오버까지 몰고 가서, 종료 표시와 기록 저장과 재시작이 이어지는지 본다.
+	for _i in 400:
 		if game.is_over:
 			break
+		game.hard_drop()
+		await process_frame
+	assert(game.is_over, "조각을 400번 떨어뜨리면 판이 끝나야 한다")
+	var final_score: int = game.score
+	assert(hud.get_node("GameOver").visible, "게임이 끝나면 종료 표시가 떠야 한다")
+	assert(SaveData.load_high_score() >= final_score,
+		"게임오버 시 점수가 기록에 남아야 한다: 최고 %d, 이번 %d"
+		% [SaveData.load_high_score(), final_score])
+
+	main._unhandled_input(restart_key)
+	assert(not game.is_over and game.current != null, "게임오버 뒤에도 R 로 다시 시작해야 한다")
+	assert(game.score == 0, "재시작하면 점수가 0")
+	assert(not hud.get_node("GameOver").visible, "재시작하면 종료 표시가 사라져야 한다")
 
 	assert(game.board.cells.size() == 224, "보드 크기가 유지되어야 한다")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveData.PATH))
 	print("test_main_smoke: OK")
 	quit()

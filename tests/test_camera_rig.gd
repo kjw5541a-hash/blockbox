@@ -6,6 +6,7 @@ const LEFT := Vector2i(-1, 0)
 const RIGHT := Vector2i(1, 0)
 
 func _initialize() -> void:
+	await _test_axes_match_real_camera()
 	_test_up_is_always_away()
 	_test_opposite_directions_cancel()
 	_test_turn_rotates_mapping_consistently()
@@ -72,8 +73,35 @@ func _test_tilt_axis() -> void:
 func _test_mapping_is_pinned_to_axes() -> void:
 	# 관계만 확인하면 AWAY 와 RIGHT 를 통째로 맞바꿔도 대부분의 테스트가 통과한다.
 	var r := _rig()
-	assert(r.axis_away() == Vector3i(0, 0, 1), "기본 시점의 안쪽은 +Z")
+	assert(r.axis_away() == Vector3i(0, 0, -1), "기본 시점의 안쪽은 -Z")
 	assert(r.axis_right() == Vector3i(1, 0, 0), "기본 시점의 오른쪽은 +X")
+	r.yaw_step = 1
+	assert(r.axis_away() == Vector3i(-1, 0, 0), "한 번 돌린 시점의 안쪽은 -X")
+	assert(r.axis_right() == Vector3i(0, 0, -1), "한 번 돌린 시점의 오른쪽은 -Z")
+
+# 위의 테스트들은 전부 move_delta 나 표끼리의 관계만 본다. 표 전체가 뒤집혀도
+# 자기들끼리는 앞뒤가 맞아 통과한다. 여기서만 실제 씬의 Camera3D 변환을 읽어
+# "화면 안쪽"과 "화면 오른쪽"이 정말 그 방향인지 확인한다.
+func _test_axes_match_real_camera() -> void:
+	var scene: PackedScene = load("res://scenes/main.tscn")
+	var main: Node = scene.instantiate()
+	root.add_child(main)
+	await process_frame
+	var r: CameraRig = main.rig
+	var cam: Camera3D = r.get_node("Camera3D")
+	for s in 4:
+		r.yaw_step = s
+		# 트윈을 기다리지 않고 목표 각도를 바로 넣는다.
+		r.rotation_degrees = Vector3(
+			CameraRig.PITCH_DEG, CameraRig.YAW_BASE_DEG + 90.0 * s, 0.0)
+		await process_frame
+		var forward := -cam.global_transform.basis.z  # 카메라는 자기 -Z 를 본다
+		var screen_right := cam.global_transform.basis.x
+		assert(Vector3(r.axis_away()).dot(forward) > 0.0,
+			"yaw %d: axis_away %s 가 화면 안쪽 %s 과 반대다" % [s, r.axis_away(), forward])
+		assert(Vector3(r.axis_right()).dot(screen_right) > 0.0,
+			"yaw %d: axis_right %s 가 화면 오른쪽 %s 과 반대다" % [s, r.axis_right(), screen_right])
+	main.queue_free()
 
 func _test_visual_yaw_tracks_yaw_step() -> void:
 	var r := _rig()

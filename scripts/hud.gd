@@ -44,6 +44,7 @@ func _on_game_over() -> void:
 	var best := SaveData.submit(game.score)
 	$GameOver.text = "게임 종료\n점수 %d   최고 %d\nR 로 다시 시작" % [game.score, best]
 	$GameOver.visible = true
+	_refresh_score()  # 방금 갱신된 최고 기록을 상단 표시에도 반영한다
 
 # 재시작할 때 이전 판의 점수와 미리보기가 남지 않도록 전부 새로 그린다.
 func restart() -> void:

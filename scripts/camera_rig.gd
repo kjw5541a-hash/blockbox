@@ -4,11 +4,15 @@ extends Node3D
 # 화면 방향과 그리드 축의 대응. 이 파일이 단독으로 소유한다.
 # 다른 파일이 화면 방향을 그리드 축으로 직접 변환하면, 시점을 돌린 뒤
 # 이동 매핑과 회전축 매핑이 어긋난다.
+# 값은 실제 카메라 기저에서 나온 것이다. 리그가 (PITCH_DEG, YAW_BASE_DEG + 90*step)
+# 으로 놓이면 yaw_step 0 에서 카메라는 -X/-Z 쪽을 바라본다 — 즉 화면 안쪽은 -Z 다.
+# tests/test_camera_rig.gd 의 _test_axes_match_real_camera 가 이 표를 카메라
+# 기저와 직접 대조한다. 관계만 보는 테스트는 표 전체가 뒤집혀도 통과한다.
 const AWAY: Array[Vector3i] = [
-	Vector3i(0, 0, 1), Vector3i(-1, 0, 0), Vector3i(0, 0, -1), Vector3i(1, 0, 0),
+	Vector3i(0, 0, -1), Vector3i(-1, 0, 0), Vector3i(0, 0, 1), Vector3i(1, 0, 0),
 ]
 const RIGHT: Array[Vector3i] = [
-	Vector3i(1, 0, 0), Vector3i(0, 0, 1), Vector3i(-1, 0, 0), Vector3i(0, 0, -1),
+	Vector3i(1, 0, 0), Vector3i(0, 0, -1), Vector3i(-1, 0, 0), Vector3i(0, 0, 1),
 ]
 
 const YAW_BASE_DEG := 45.0

@@ -20,11 +20,18 @@ const LEVEL_UP_LAYERS := 5
 
 # 회전이 막혔을 때 조각을 밀어보는 순서. 위로 미는 것을 마지막에 두는 이유는
 # 조각이 위로 밀리면 예상 착지 지점이 크게 달라져 플레이어의 예측이 깨지기 때문이다.
+# 보드가 4칸 폭이라 한 칸 밀기로는 부족하다. 가로 4칸짜리 I 조각을 세로로 돌리면
+# 중심이 최대 세 칸까지 밀려나고(보드 폭 전체), 바닥 근처에서 세우려면 세 칸
+# 내려야 한다. 이보다 좁으면 벽에 붙은 I 조각이 영영 안 돌아간다.
 const KICKS: Array[Vector3i] = [
 	Vector3i.ZERO,
 	Vector3i(1, 0, 0), Vector3i(-1, 0, 0),
 	Vector3i(0, 0, 1), Vector3i(0, 0, -1),
-	Vector3i(0, -1, 0),
+	Vector3i(2, 0, 0), Vector3i(-2, 0, 0),
+	Vector3i(0, 0, 2), Vector3i(0, 0, -2),
+	Vector3i(3, 0, 0), Vector3i(-3, 0, 0),
+	Vector3i(0, 0, 3), Vector3i(0, 0, -3),
+	Vector3i(0, -1, 0), Vector3i(0, -2, 0), Vector3i(0, -3, 0),
 	Vector3i(0, 1, 0),
 ]
 
@@ -132,7 +139,12 @@ func step(delta: float) -> void:
 	_fall_timer += delta
 	if _fall_timer >= fall_interval():
 		_fall_timer = 0.0
-		if not move(Vector3i(0, -1, 0)):
+		if move(Vector3i(0, -1, 0)):
+			# 한 칸 내려갔으면 이전 접지에서 쌓인 시간과 예산은 무효다. 이걸 안 지우면
+			# 예산을 다 쓴 조각이 턱에서 미끄러져 내려온 순간 바로 잠긴다.
+			_lock_timer = 0.0
+			_lock_resets = 0
+		else:
 			_grounded = true
 			_lock_timer = 0.0
 
