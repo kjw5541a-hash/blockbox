@@ -40,12 +40,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_SPACE:
 			game.hard_drop()
 		KEY_Z:
-			var a: Array = rig.tilt_axis(rig.axis_right())
+			var a: Array = rig.rot_screen_x()
 			game.rotate(a[0], a[1])
 		KEY_X:
-			game.rotate(Piece.AXIS_Y, 1)
+			var a: Array = rig.rot_screen_y()
+			game.rotate(a[0], a[1])
 		KEY_C:
-			var a: Array = rig.tilt_axis(rig.axis_away())
+			var a: Array = rig.rot_screen_z()
 			game.rotate(a[0], a[1])
 		KEY_Q:
 			rig.turn(-1)

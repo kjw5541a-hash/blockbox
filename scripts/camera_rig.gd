@@ -80,3 +80,26 @@ func tilt_axis(v: Vector3i) -> Array:
 	if v.x != 0:
 		return [Piece.AXIS_X, signi(v.x)]
 	return [Piece.AXIS_Z, signi(v.z)]
+
+# 화면 축을 기준으로 한 회전축을 [axis, dir] 로 돌려준다. 회전 버튼은 전부
+# 이 셋을 거친다 — 시점을 돌리거나 눕히면 같은 버튼이 새 화면 기준으로 돈다.
+#
+# 화면 가로축은 상하각과 무관하게 axis_right 다. 세로축과 안팎축만 갈린다:
+# 눕히기 전에는 월드 Y 가 화면 세로축, axis_away 가 안팎축이고, 탑뷰에서는
+# 둘이 맞바뀐다. 갈아타는 지점은 -45 도다 — 셋을 겹치지 않게 붙일 때 화면과
+# 가장 잘 맞는 배치가 그 각도에서 뒤집힌다. 경계값(기본 시점)은 눕히기 전 쪽.
+const SCREEN_AXIS_CROSS := -45.0
+
+func rot_screen_x() -> Array:
+	return tilt_axis(axis_right())
+
+func rot_screen_y() -> Array:
+	if _pitch < SCREEN_AXIS_CROSS:
+		return tilt_axis(axis_away())
+	return [Piece.AXIS_Y, 1]
+
+func rot_screen_z() -> Array:
+	if _pitch < SCREEN_AXIS_CROSS:
+		# 탑뷰에서 화면 안쪽은 곧장 아래다.
+		return [Piece.AXIS_Y, -1]
+	return tilt_axis(axis_away())

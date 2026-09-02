@@ -3,27 +3,28 @@
 [ext_resource type="FontVariation" path="res://assets/fonts/NotoSansKR-bold.tres" id="1"]
 
 ; 배경이 거의 검정(0.05, 0.06, 0.09)이라 기본 테마의 어두운 회색 버튼은
-; 배경에 묻힌다. 버튼 바탕을 밝히고 테두리를 둘러 경계를 만든다.
+; 배경에 묻힌다. 게임 화면과 같은 어두운 계열을 유지하면서, 바탕을 한 단계만
+; 올리고 테두리로 경계를 만든다 — 밝기 차보다 테두리가 경계를 더 잘 세운다.
 
 [sub_resource type="StyleBoxFlat" id="Normal"]
-bg_color = Color(0.16, 0.19, 0.28, 1)
+bg_color = Color(0.11, 0.13, 0.19, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.34, 0.4, 0.56, 1)
+border_color = Color(0.28, 0.33, 0.46, 1)
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="Hover"]
-bg_color = Color(0.22, 0.26, 0.37, 1)
+bg_color = Color(0.15, 0.18, 0.26, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.45, 0.52, 0.7, 1)
+border_color = Color(0.36, 0.42, 0.58, 1)
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
@@ -31,12 +32,12 @@ corner_radius_bottom_left = 10
 
 ; 고른 항목. 통 크기와 난이도는 이 상태로만 구분되므로 확실히 밝아야 한다.
 [sub_resource type="StyleBoxFlat" id="Pressed"]
-bg_color = Color(0.38, 0.47, 0.72, 1)
+bg_color = Color(0.24, 0.3, 0.47, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.7, 0.8, 1, 1)
+border_color = Color(0.5, 0.6, 0.85, 1)
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
@@ -50,7 +51,7 @@ draw_center = false
 ; 모든 글씨가 16pt 로 나왔다.
 [resource]
 default_font = ExtResource("1")
-default_font_size = 36
+default_font_size = 24
 Button/colors/font_color = Color(0.84, 0.87, 0.94, 1)
 Button/colors/font_hover_color = Color(1, 1, 1, 1)
 Button/colors/font_pressed_color = Color(1, 1, 1, 1)

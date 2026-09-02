@@ -96,7 +96,6 @@ button_group = SubResource("DiffGroup")
 text = "어려움"
 
 [node name="Hint" type="Label" parent="Center/Menu"]
-theme_override_font_sizes/font_size = 30
 horizontal_alignment = 1
 autowrap_mode = 3
 text = "쉬움: 저절로 내려오지 않음 · 어려움: 비평면 조각 포함"

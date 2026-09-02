@@ -88,6 +88,26 @@ func _initialize() -> void:
 	assert(hud.get_node("Top/NextSwatch").color == BlockColors.of(game.next_kind),
 		"다음 조각 색 견본이 실제 next_kind 와 어긋난다")
 
+	# 회전 버튼 셋이 각자 제 화면 축에 물려 있는지 본다. 버튼이 서로 바뀌어도
+	# 조각은 어쨌든 돌아가므로, 같은 축으로 직접 돌린 모양과 대조한다.
+	# 대칭인 조각은 축이 달라도 같은 모양이 나올 수 있어 나사 조각으로 바꿔 본다.
+	var probe := Piece.create(6)
+	probe.origin = game.current.origin
+	game.current = probe
+	var picks := {
+		"RotateX": main.rig.rot_screen_x(),
+		"RotateY": main.rig.rot_screen_y(),
+		"RotateZ": main.rig.rot_screen_z(),
+	}
+	for button_name in picks:
+		var axis: Array = picks[button_name]
+		var before: Array[Vector3i] = game.current.cells
+		var turned: Array[Vector3i] = game.current.rotated(axis[0], axis[1]).cells
+		assert(turned != before, "%s: 나사 조각은 어느 축으로든 모양이 바뀌어야 한다" % button_name)
+		(hud.get_node("Bottom/" + button_name) as Button).pressed.emit()
+		assert(game.current.cells == turned,
+			"%s 버튼이 화면 축 %s 이 아닌 다른 축으로 돌린다" % [button_name, axis])
+
 	var gauge := hud.get_node("LayerGauge")
 	var gauge_bar: ColorRect = gauge._bars[Board.HEIGHT - 1]
 	gauge_bar.size.x = 48.0

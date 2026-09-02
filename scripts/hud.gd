@@ -6,9 +6,9 @@ var rig: CameraRig = null
 func setup(g: Game, r: CameraRig) -> void:
 	game = g
 	rig = r
-	$Bottom/RotateX.pressed.connect(_rotate_x)
-	$Bottom/RotateY.pressed.connect(func() -> void: game.rotate(Piece.AXIS_Y, 1))
-	$Bottom/RotateZ.pressed.connect(_rotate_z)
+	$Bottom/RotateX.pressed.connect(_rotate.bind(rig.rot_screen_x))
+	$Bottom/RotateY.pressed.connect(_rotate.bind(rig.rot_screen_y))
+	$Bottom/RotateZ.pressed.connect(_rotate.bind(rig.rot_screen_z))
 	$Bottom/Drop.pressed.connect(func() -> void: game.hard_drop())
 	game.layers_cleared.connect(func(_ys: PackedInt32Array) -> void: _refresh_score())
 	# next_kind 은 _spawn 끝에서야 다음 값으로 넘어간다. piece_locked 에 물리면
@@ -25,14 +25,10 @@ func setup(g: Game, r: CameraRig) -> void:
 func _refresh_next() -> void:
 	$Top/NextSwatch.color = BlockColors.of(game.next_kind)
 
-# 회전 축은 화면 기준이다. X 는 화면 가로축, Y 는 화면 세로축(항상 월드 Y),
-# Z 는 화면 안팎축. 시점을 돌리면 X 와 Z 가 가리키는 격자축도 같이 따라간다.
-func _rotate_x() -> void:
-	var a: Array = rig.tilt_axis(rig.axis_right())
-	game.rotate(a[0], a[1])
-
-func _rotate_z() -> void:
-	var a: Array = rig.tilt_axis(rig.axis_away())
+# 회전 축은 화면 기준이다. 어떤 격자축이 되는지는 CameraRig 가 지금 시점을
+# 보고 정한다 — 버튼은 축을 고르는 함수를 들고 있다가 누를 때마다 새로 묻는다.
+func _rotate(pick: Callable) -> void:
+	var a: Array = pick.call()
 	game.rotate(a[0], a[1])
 
 func _refresh_score() -> void:

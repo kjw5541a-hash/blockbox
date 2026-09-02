@@ -16,6 +16,7 @@ func _initialize() -> void:
 	_test_visual_yaw_tracks_yaw_step()
 	await _test_pitch_is_continuous_and_clamped()
 	await _test_pitch_survives_a_turn()
+	await _test_screen_rotation_axes_follow_the_view()
 	print("test_camera_rig: OK")
 	quit()
 
@@ -169,3 +170,60 @@ func _test_pitch_survives_a_turn() -> void:
 	assert(is_equal_approx(r.rotation_degrees.y, r.yaw_degrees()),
 		"좌우 회전은 그대로 끝나야 한다: %f" % r.rotation_degrees.y)
 	r.queue_free()
+
+
+# 회전 버튼은 화면 축 기준이다. 시점을 눕히면 화면 세로축과 안팎축이 서로 다른
+# 격자축으로 넘어간다 — 탑뷰에서 "화면 안쪽"은 월드 Y 아래쪽이다.
+# 판정 기준은 "세 화면 축에 격자축 셋을 겹치지 않게 붙일 때 합이 최대"다.
+# 축 하나만 따로 보면 안 된다: 시점이 45도로 틀어져 있어 수평 격자축은 화면
+# 가로/안쪽 성분을 1/√2 씩만 갖고, 그 탓에 축별 최선과 전체 최선이 다르다.
+func _test_screen_rotation_axes_follow_the_view() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	var r: CameraRig = main.rig
+	var cam: Camera3D = r.get_node("Camera3D")
+	# -45 는 두 배치의 합이 같은 경계라 양옆만 본다.
+	for pitch in [-35.0, -44.0, -46.0, -90.0]:
+		for step in 4:
+			r.yaw_step = step
+			r.pitch_by(pitch - r.pitch_degrees())
+			r.rotation_degrees.y = CameraRig.YAW_BASE_DEG + 90.0 * step
+			await process_frame
+			var basis := cam.global_transform.basis
+			var picked := [r.rot_screen_x(), r.rot_screen_y(), r.rot_screen_z()]
+			var used := {}
+			for a in picked:
+				used[a[0]] = true
+			assert(used.size() == 3,
+				"상하각 %f yaw %d: 세 버튼이 서로 다른 축이어야 한다: %s"
+				% [pitch, step, picked])
+			var got := _alignment(picked, basis)
+			var best := _best_alignment(basis)
+			assert(got >= best - 0.001,
+				"상하각 %f yaw %d: 회전축 배치 %s 가 화면과 덜 맞는다 (%f, 최선 %f)"
+				% [pitch, step, picked, got, best])
+	main.queue_free()
+
+func _axis_vec(a: Array) -> Vector3:
+	var v := [Vector3.RIGHT, Vector3.UP, Vector3.BACK][a[0]] as Vector3
+	return v * float(a[1])
+
+# 화면 가로축 / 세로축 / 안쪽축과 얼마나 겹치는지의 합.
+func _alignment(picked: Array, basis: Basis) -> float:
+	var screens := [basis.x, basis.y, -basis.z]
+	var sum := 0.0
+	for i in 3:
+		sum += _axis_vec(picked[i]).dot(screens[i])
+	return sum
+
+func _best_alignment(basis: Basis) -> float:
+	var choices := [[0, 1], [0, -1], [1, 1], [1, -1], [2, 1], [2, -1]]
+	var best := -INF
+	for a in choices:
+		for b in choices:
+			for c in choices:
+				if a[0] == b[0] or b[0] == c[0] or a[0] == c[0]:
+					continue
+				best = maxf(best, _alignment([a, b, c], basis))
+	return best

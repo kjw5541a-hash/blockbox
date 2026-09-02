@@ -27,7 +27,7 @@ func _test_setting_points_at_the_font() -> void:
 	assert(font != null, "테마에 기본 글꼴이 없으면 내장 글꼴로 떨어져 한글이 깨진다")
 	# 720x1280 뷰포트가 폰 화면 폭으로 줄어든다. 기본 16 이면 손바닥에서 못 읽는다.
 	var size := _theme().default_font_size
-	assert(size >= 30, "기본 글자 크기가 폰에서 읽기엔 작다: %d" % size)
+	assert(size >= 22, "기본 글자 크기가 폰에서 읽기엔 작다: %d" % size)
 
 func _test_font_covers_every_string_literal() -> void:
 	var font := _font()

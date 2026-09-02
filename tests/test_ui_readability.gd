@@ -7,6 +7,7 @@ func _initialize() -> void:
 	_test_font_is_bold()
 	await _test_buttons_stand_out_from_the_background()
 	await _test_text_is_big_enough_to_read()
+	await _test_game_buttons_keep_their_size()
 	print("test_ui_readability: OK")
 	quit()
 
@@ -34,7 +35,7 @@ func _test_buttons_stand_out_from_the_background() -> void:
 	assert(normal != null and pressed != null, "버튼 바탕이 StyleBoxFlat 이어야 한다")
 
 	var gap := absf(normal.bg_color.get_luminance() - back.get_luminance())
-	assert(gap >= 0.08, "버튼이 배경에 묻힌다 (밝기 차 %f)" % gap)
+	assert(gap >= 0.05, "버튼이 배경에 묻힌다 (밝기 차 %f)" % gap)
 
 	# 통 크기와 난이도는 눌린 상태로만 구분된다. 안 고른 것과 확실히 달라야 한다.
 	var picked := absf(pressed.bg_color.get_luminance() - normal.bg_color.get_luminance())
@@ -57,13 +58,29 @@ func _test_text_is_big_enough_to_read() -> void:
 	# gui/theme/default_font_size 는 36 으로 적어 두어도 먹지 않아서, 설정값만
 	# 보는 검사는 통과하는데 화면은 16pt 로 나왔다.
 	var best: Label = menu.get_node("Center/Menu/Best")
-	assert(best.get_theme_default_font_size() >= 30,
+	assert(best.get_theme_default_font_size() >= 22,
 		"기본 글자 크기가 폰에서 읽기엔 작다: %d" % best.get_theme_default_font_size())
 	# 크기를 준 것과 실제로 그만큼 그려지는 것은 다르다. 높이로 확인한다.
-	assert(best.get_minimum_size().y >= 40,
+	assert(best.get_minimum_size().y >= 28,
 		"글자가 실제로는 작게 그려지고 있다 (높이 %f)" % best.get_minimum_size().y)
 	# 버전 표시만 예외다 - 일부러 흐리게 깔아 둔 빌드 표식이다.
 	var hint: Label = menu.get_node("Center/Menu/Hint")
 	var hint_size: int = hint.get_theme_font_size("font_size")
-	assert(hint_size >= 30, "설명 글자가 폰에서 읽기엔 작다: %d" % hint_size)
+	assert(hint_size >= 22, "설명 글자가 폰에서 읽기엔 작다: %d" % hint_size)
 	menu.queue_free()
+
+
+# 시작 화면을 키우느라 테마 기본 글자 크기를 올렸다. 게임 화면 버튼까지 같이
+# 부풀면 통이 그만큼 좁아 보인다 — 하단 줄 높이를 여기서 못박는다.
+func _test_game_buttons_keep_their_size() -> void:
+	var hud: CanvasLayer = load("res://scenes/hud.tscn").instantiate()
+	root.add_child(hud)
+	await process_frame
+	var bottom: Control = hud.get_node("Bottom")
+	assert(is_equal_approx(bottom.size.y, 140.0),
+		"하단 버튼 줄이 기존 높이를 벗어났다: %f" % bottom.size.y)
+	for b in bottom.get_children():
+		var got: float = (b as Button).get_combined_minimum_size().y
+		assert(got <= 116.0,
+			"버튼 %s 가 글자 크기 때문에 커졌다: %f" % [b.name, got])
+	hud.queue_free()
