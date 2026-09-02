@@ -184,8 +184,8 @@ func _test_view_tilts_up_and_down() -> void:
 	main.queue_free()
 
 
-# 좌우로 끌 때 손가락이 위아래로 흔들리는 건 정상이다. 그때마다 통이 누우면
-# 시점을 돌릴 때마다 각도가 조금씩 밀려 되돌릴 방법이 없다.
+# 손가락으로 긋는 선은 축에 딱 맞지 않는다. 좌우로 끌면 세로로도 조금 미끄러지고,
+# 그때마다 통이 누우면 시점을 돌릴 때마다 각도가 밀려 되돌릴 방법이 없다.
 func _test_one_drag_does_one_thing() -> void:
 	var main: Node = await _main()
 	var rig: CameraRig = main.rig
@@ -195,21 +195,22 @@ func _test_one_drag_does_one_thing() -> void:
 	var pitch := rig.pitch_degrees()
 	var step := rig.yaw_step
 
-	# 가로로 크게, 세로로 조금씩 흔들며 끈다.
+	# 가로로 크게, 세로로 조금씩 같은 쪽으로 미끄러진다.
 	input.begin_drag(outside)
-	for i in 12:
-		input.feed_drag(Vector2(10.0, 6.0 if i % 2 == 0 else -6.0))
+	for _i in 6:
+		input.feed_drag(Vector2(20.0, 8.0))
 	assert(rig.yaw_step == wrapi(step + 1, 0, 4),
-		"가로로 %f 픽셀을 끌었으면 시점이 돌아야 한다" % TouchInput.TURN_PIXELS)
+		"가로로 120픽셀을 끌었으면 시점이 한 칸 돌아야 한다: %d" % rig.yaw_step)
 	assert(is_equal_approx(rig.pitch_degrees(), pitch),
-		"좌우로 끄는 중의 세로 흔들림이 통을 눕혔다: %f" % rig.pitch_degrees())
+		"좌우로 끄는 중에 미끄러진 48픽셀이 통을 눕혔다: %f" % rig.pitch_degrees())
 
-	# 반대도 마찬가지 - 세로로 끄는 중의 가로 흔들림이 시점을 돌리면 안 된다.
+	# 반대도 마찬가지 - 세로로 끄는 중에 미끄러진 가로 몫이 시점을 돌리면 안 된다.
 	step = rig.yaw_step
 	input.begin_drag(outside)
-	for i in 12:
-		input.feed_drag(Vector2(6.0 if i % 2 == 0 else -6.0, -10.0))
-	assert(rig.yaw_step == step, "상하로 끄는 중의 가로 흔들림이 시점을 돌렸다")
+	for _i in 12:
+		input.feed_drag(Vector2(8.0, -20.0))
+	assert(rig.yaw_step == step,
+		"상하로 끄는 중에 미끄러진 96픽셀이 시점을 돌렸다: %d" % rig.yaw_step)
 	assert(rig.pitch_degrees() > pitch + 1.0,
 		"세로로 끌었는데 통이 안 누웠다: %f" % rig.pitch_degrees())
 	main.queue_free()
