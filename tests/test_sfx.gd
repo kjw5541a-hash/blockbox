@@ -42,6 +42,12 @@ func _test_move_is_a_run_of_ticks() -> void:
 		var after := _loudness(b, at, w)
 		assert(after > before * 1.3,
 			"%d 번째 알이 앞과 이어져 있다: 앞 %f 뒤 %f" % [k, before, after])
+	# 위 반복은 MOVE_TICKS 를 따라 도니까 개수가 줄면 검사도 같이 줄어든다.
+	# 알이 셋은 되는지는 따로 본다 — 세 번째 알 자리가 비어 있으면 구르는 게
+	# 아니라 딸깍 하나다.
+	var third := _loudness(b, int(2 * Sfx.MOVE_GAP * Sfx.RATE), w)
+	var first := _loudness(b, 0, w)
+	assert(third > first * 0.2, "세 번째 알이 없다: 첫 알 %f 세 번째 %f" % [first, third])
 
 func _loudness(b: PackedFloat32Array, start: int, count: int) -> float:
 	var sum := 0.0
