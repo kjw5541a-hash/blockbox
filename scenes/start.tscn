@@ -95,10 +95,18 @@ toggle_mode = true
 button_group = SubResource("DiffGroup")
 text = "어려움"
 
+[node name="Hell" type="Button" parent="Center/Menu/Difficulty"]
+custom_minimum_size = Vector2(0, 100)
+size_flags_horizontal = 3
+focus_mode = 0
+toggle_mode = true
+button_group = SubResource("DiffGroup")
+text = "헬"
+
 [node name="Hint" type="Label" parent="Center/Menu"]
 horizontal_alignment = 1
 autowrap_mode = 3
-text = "쉬움: 저절로 내려오지 않음 · 어려움: 비평면 조각 포함"
+text = "보통부터 비평면 조각 · 어려움부터 저절로 내려옴 · 헬은 그림자 없음"
 
 [node name="Start" type="Button" parent="Center/Menu"]
 custom_minimum_size = Vector2(0, 120)

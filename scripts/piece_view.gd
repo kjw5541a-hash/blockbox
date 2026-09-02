@@ -61,10 +61,15 @@ func refresh() -> void:
 	_solid.mesh = BlockMesh.hull_mesh(game.current.world_cells())
 	_show(_solid, Vector3.ZERO, color, 1.0)
 
-	_ghost.mesh = BlockMesh.hull_mesh(game.ghost_cells())
-	_show(_ghost, Vector3.ZERO, color, GHOST_ALPHA)
+	# 헬 난이도는 착지 자리를 보여주지 않는다.
+	var tops: Array[Vector3i] = []
+	if GameConfig.ghost():
+		_ghost.mesh = BlockMesh.hull_mesh(game.ghost_cells())
+		_show(_ghost, Vector3.ZERO, color, GHOST_ALPHA)
+		tops = top_cells(game.ghost_cells())
+	else:
+		_ghost.visible = false
 
-	var tops := top_cells(game.ghost_cells())
 	for i in _marks.size():
 		if i >= tops.size():
 			_marks[i].visible = false

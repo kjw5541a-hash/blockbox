@@ -25,7 +25,7 @@ func _fill(b: Board, y: int, n: int) -> void:
 
 func _test_threshold_matches_difficulty() -> void:
 	for size in GameConfig.SIZES:
-		for d in [GameConfig.EASY, GameConfig.NORMAL, GameConfig.HARD]:
+		for d in GameConfig.ALL:
 			GameConfig.size = size
 			GameConfig.difficulty = d
 			GameConfig.apply()
@@ -39,7 +39,7 @@ func _test_threshold_matches_difficulty() -> void:
 # 기준보다 한 칸 모자라면 절대 지워지지 않고, 기준에 닿는 순간 지워져야 한다.
 func _test_clears_at_threshold_and_not_one_cell_earlier() -> void:
 	for size in GameConfig.SIZES:
-		for d in [GameConfig.EASY, GameConfig.NORMAL, GameConfig.HARD]:
+		for d in GameConfig.ALL:
 			GameConfig.size = size
 			GameConfig.difficulty = d
 			GameConfig.apply()

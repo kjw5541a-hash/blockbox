@@ -2,7 +2,7 @@ extends SceneTree
 
 func _initialize() -> void:
 	_test_apply_sets_board()
-	_test_kinds_and_gravity()
+	_test_each_difficulty_flips_one_switch()
 	await _test_start_scene_rows()
 	await _test_main_scene_uses_chosen_size()
 	_test_app_icon_is_set()
@@ -50,22 +50,30 @@ func _test_apply_sets_board() -> void:
 	_restore()
 	assert(Board.WIDTH == 4 and Board.LAYER_CLEAR_THRESHOLD == 16, "기본값으로 되돌아와야 한다")
 
-func _test_kinds_and_gravity() -> void:
-	for d in [GameConfig.EASY, GameConfig.NORMAL]:
+# 난이도는 스위치 세 개가 한 단계마다 하나씩 켜지는 계단이다. 표를 그대로
+# 적어 두고 대조한다 — 한 칸이라도 어긋나면 고른 난이도와 실제 규칙이 다르다.
+func _test_each_difficulty_flips_one_switch() -> void:
+	# [특수 조각, 자동 낙하, 착지 그림자]
+	var want := {
+		GameConfig.EASY: [false, false, true],
+		GameConfig.NORMAL: [true, false, true],
+		GameConfig.HARD: [true, true, true],
+		GameConfig.HELL: [true, true, false],
+	}
+	assert(want.size() == GameConfig.ALL.size(), "난이도 수와 표가 어긋난다")
+	for d in GameConfig.ALL:
 		GameConfig.difficulty = d
+		var row: Array = want[d]
 		var ks := GameConfig.kinds()
-		assert(ks.size() == Piece.PLANAR_MAX,
-			"난이도 %d 는 평면 조각 %d 종만: %s" % [d, Piece.PLANAR_MAX, ks])
-		for k in ks:
-			assert(k <= Piece.PLANAR_MAX, "난이도 %d 에 비평면 조각 %d 가 섞였다" % [d, k])
-	GameConfig.difficulty = GameConfig.HARD
-	assert(GameConfig.kinds().size() == Piece.SHAPES.size(), "어려움은 전 종류")
-
-	GameConfig.difficulty = GameConfig.EASY
-	assert(not GameConfig.gravity(), "쉬움에는 중력이 없다")
-	for d in [GameConfig.NORMAL, GameConfig.HARD]:
-		GameConfig.difficulty = d
-		assert(GameConfig.gravity(), "난이도 %d 에는 중력이 있다" % d)
+		if row[0]:
+			assert(ks.size() == Piece.SHAPES.size(), "난이도 %d 는 전 종류: %s" % [d, ks])
+		else:
+			assert(ks.size() == Piece.PLANAR_MAX,
+				"난이도 %d 는 평면 조각 %d 종만: %s" % [d, Piece.PLANAR_MAX, ks])
+			for k in ks:
+				assert(k <= Piece.PLANAR_MAX, "난이도 %d 에 비평면 조각 %d 가 섞였다" % [d, k])
+		assert(GameConfig.gravity() == row[1], "난이도 %d 의 자동 낙하가 표와 다르다" % d)
+		assert(GameConfig.ghost() == row[2], "난이도 %d 의 착지 그림자가 표와 다르다" % d)
 	_restore()
 
 func _test_start_scene_rows() -> void:
@@ -79,7 +87,8 @@ func _test_start_scene_rows() -> void:
 	var diff: Container = menu.get_node("Center/Menu/Difficulty")
 	assert(sizes.get_child_count() == GameConfig.SIZES.size(),
 		"통 크기 버튼 수가 SIZES 와 어긋난다: %d" % sizes.get_child_count())
-	assert(diff.get_child_count() == 3, "난이도 버튼은 3개")
+	assert(diff.get_child_count() == GameConfig.ALL.size(),
+		"난이도 버튼 수가 ALL 과 어긋난다: %d" % diff.get_child_count())
 	for row in [sizes, diff]:
 		var pressed := 0
 		for c in row.get_children():
