@@ -5,8 +5,20 @@ func _initialize() -> void:
 	_test_kinds_and_gravity()
 	await _test_start_scene_rows()
 	await _test_main_scene_uses_chosen_size()
+	_test_app_icon_is_set()
 	print("test_game_config: OK")
 	quit()
+
+# 웹 빌드의 파비콘과 iOS "홈 화면에 추가" 아이콘은 Web 프리셋이 이 설정 하나에서
+# 만들어 낸다. 경로가 비거나 파일이 사라지면 아이콘 없이 배포되는데, 화면만
+# 봐서는 눈치채기 어렵다.
+func _test_app_icon_is_set() -> void:
+	var path: String = str(ProjectSettings.get_setting("application/config/icon", ""))
+	assert(path != "", "앱 아이콘 경로가 비어 있다")
+	assert(ResourceLoader.exists(path), "앱 아이콘 파일이 없다: %s" % path)
+	var tex: Texture2D = load(path)
+	assert(tex.get_width() == tex.get_height() and tex.get_width() >= 180,
+		"아이콘은 정사각형이고 180px 이상이어야 한다: %dx%d" % [tex.get_width(), tex.get_height()])
 
 func _restore() -> void:
 	GameConfig.size = 4
