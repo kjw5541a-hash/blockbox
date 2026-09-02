@@ -23,6 +23,7 @@ func _initialize() -> void:
 	_test_kick_order_prefers_horizontal()
 	_test_every_kind_rotates_anywhere_on_empty_board()
 	_test_layer_clear_scores()
+	_test_pause_freezes_the_lock_clock()
 	_test_multi_layer_bonus()
 	_test_level_rises()
 	_test_footprint_is_deduplicated()
@@ -401,3 +402,24 @@ func _test_easy_draws_planar_pieces_only() -> void:
 		seen[h._draw_kind()] = true
 	assert(seen.size() == Piece.SHAPES.size(),
 		"어려움에서는 모든 조각이 나와야 한다: %d 종" % seen.size())
+
+
+# 일시정지가 조작만 막고 시계는 그대로 두면, 접지된 조각의 잠금 지연이
+# 멈춰 있는 동안 다 흘러 버린다. 그러면 푸는 순간 조각이 바로 잠긴다.
+func _test_pause_freezes_the_lock_clock() -> void:
+	var g := _make_game()
+	g.start(31)
+	while g.move(Vector3i(0, -1, 0)):
+		pass
+	var held: Vector3i = g.current.origin
+
+	g.paused = true
+	g.step(Game.LOCK_DELAY * 2.0)
+	assert(g.current != null and g.current.origin == held,
+		"멈춘 동안 잠금 시계가 흘러 조각이 잠겼다")
+
+	g.paused = false
+	g.step(Game.LOCK_DELAY * 2.0)
+	assert(g.current == null or g.current.origin != held,
+		"일시정지를 풀었는데 잠금 시계가 다시 돌지 않는다")
+	g.queue_free()
