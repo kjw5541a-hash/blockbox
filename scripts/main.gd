@@ -1,5 +1,8 @@
 extends Node3D
 
+# 키 한 번에 움직이는 상하각. 손가락 조작은 다음에 붙인다.
+const PITCH_KEY_STEP := 5.0
+
 @onready var game: Game = $Game
 @onready var rig: CameraRig = $CameraRig
 @onready var board_view := $BoardView
@@ -12,7 +15,11 @@ func _ready() -> void:
 		(Board.WIDTH - 1) * 0.5, (Board.HEIGHT - 1) * 0.5, (Board.DEPTH - 1) * 0.5)
 	board_view.setup(game)
 	piece_view.setup(game)
+	$LayerBurst.setup(game)
 	touch_input.setup(game, rig)
+	# 층이 지워지면 통이 흔들린다. 흔드는 건 카메라 몫이라 여기서 잇는다.
+	game.layers_cleared.connect(
+		func(_ys: PackedInt32Array, _kind: int) -> void: rig.shake())
 	game.start()
 	$HUD.setup(game, rig)
 
@@ -36,17 +43,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_SPACE:
 			game.hard_drop()
 		KEY_Z:
-			var a: Array = rig.tilt_axis(rig.axis_right())
+			var a: Array = rig.rot_screen_x()
 			game.rotate(a[0], a[1])
 		KEY_X:
-			game.rotate(Piece.AXIS_Y, 1)
+			var a: Array = rig.rot_screen_y()
+			game.rotate(a[0], a[1])
 		KEY_C:
-			var a: Array = rig.tilt_axis(rig.axis_away())
+			var a: Array = rig.rot_screen_z()
 			game.rotate(a[0], a[1])
 		KEY_Q:
 			rig.turn(-1)
 		KEY_E:
 			rig.turn(1)
+		KEY_W:
+			rig.pitch_by(-PITCH_KEY_STEP)
+		KEY_S:
+			rig.pitch_by(PITCH_KEY_STEP)
 		KEY_R:
 			# 게임오버 전에 눌러도 이번 판 점수는 기록에 남긴다.
 			SaveData.submit(game.score)

@@ -6,11 +6,11 @@ var rig: CameraRig = null
 func setup(g: Game, r: CameraRig) -> void:
 	game = g
 	rig = r
-	$Bottom/RotateX.pressed.connect(_rotate_x)
-	$Bottom/RotateY.pressed.connect(func() -> void: game.rotate(Piece.AXIS_Y, 1))
-	$Bottom/RotateZ.pressed.connect(_rotate_z)
+	$Bottom/RotateX.pressed.connect(_rotate.bind(rig.rot_screen_x))
+	$Bottom/RotateY.pressed.connect(_rotate.bind(rig.rot_screen_y))
+	$Bottom/RotateZ.pressed.connect(_rotate.bind(rig.rot_screen_z))
 	$Bottom/Drop.pressed.connect(func() -> void: game.hard_drop())
-	game.layers_cleared.connect(func(_n: int) -> void: _refresh_score())
+	game.layers_cleared.connect(_on_cleared)
 	# next_kind 은 _spawn 끝에서야 다음 값으로 넘어간다. piece_locked 에 물리면
 	# 견본이 한 박자 늦어 "지금 내려오는 조각" 색을 보여준다.
 	game.piece_moved.connect(_refresh_next)
@@ -20,19 +20,24 @@ func setup(g: Game, r: CameraRig) -> void:
 	_refresh_next()
 	$LayerGauge.setup(game)
 
+const FLASH_ALPHA := 0.32
+const FLASH_TIME := 0.35
+
+func _on_cleared(_ys: PackedInt32Array, _kind: int) -> void:
+	_refresh_score()
+	# 화면이 한 번 번쩍한다. 불티만으로는 층이 사라진 순간을 놓치기 쉽다.
+	$Flash.modulate.a = FLASH_ALPHA
+	create_tween().tween_property($Flash, "modulate:a", 0.0, FLASH_TIME)
+
 # 다음 조각 미리보기. 3D 미니 뷰포트 대신 색 견본 하나로 보여준다.
 # 조각 종류는 색으로 구분되므로 이것으로 충분하다.
 func _refresh_next() -> void:
 	$Top/NextSwatch.color = BlockColors.of(game.next_kind)
 
-# 회전 축은 화면 기준이다. X 는 화면 가로축, Y 는 화면 세로축(항상 월드 Y),
-# Z 는 화면 안팎축. 시점을 돌리면 X 와 Z 가 가리키는 격자축도 같이 따라간다.
-func _rotate_x() -> void:
-	var a: Array = rig.tilt_axis(rig.axis_right())
-	game.rotate(a[0], a[1])
-
-func _rotate_z() -> void:
-	var a: Array = rig.tilt_axis(rig.axis_away())
+# 회전 축은 화면 기준이다. 어떤 격자축이 되는지는 CameraRig 가 지금 시점을
+# 보고 정한다 — 버튼은 축을 고르는 함수를 들고 있다가 누를 때마다 새로 묻는다.
+func _rotate(pick: Callable) -> void:
+	var a: Array = pick.call()
 	game.rotate(a[0], a[1])
 
 func _refresh_score() -> void:

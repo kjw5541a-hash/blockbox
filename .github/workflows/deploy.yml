@@ -1,8 +1,11 @@
 name: Deploy to Pages
 
+# 어느 브랜치를 밀어도 배포한다. Pages 는 저장소당 사이트가 하나뿐이라
+# 브랜치 빌드가 라이브를 덮어쓴다 - 폰에서 미리 보려고 일부러 그렇게 둔다.
+# 시작 화면 버전에 브랜치 이름이 찍히므로 무엇을 보고 있는지는 구분된다.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
@@ -63,8 +66,11 @@ jobs:
       - name: Stamp version
         run: |
           set -euo pipefail
-          echo "VERSION=$(date -u +%Y-%m-%d) ${GITHUB_SHA::7}" >> "$GITHUB_ENV"
-          echo "BASENAME=blockbox-$(date -u +%Y%m%d)-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          # 브랜치 이름도 박는다. 브랜치 빌드가 라이브를 덮어쓰므로, 지금
+          # 화면에 뜬 것이 main 인지 작업 중인 브랜치인지 눈으로 구별해야 한다.
+          slug=$(printf '%s' "$GITHUB_REF_NAME" | tr -c 'A-Za-z0-9' '-' | cut -c1-24)
+          echo "VERSION=$(date -u +%Y-%m-%d) $slug ${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          echo "BASENAME=blockbox-$(date -u +%Y%m%d)-$slug-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Export Web build
         run: |

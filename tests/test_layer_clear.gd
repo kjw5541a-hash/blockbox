@@ -49,13 +49,13 @@ func _test_clears_at_threshold_and_not_one_cell_earlier() -> void:
 			_fill(below, 0, t - 1)
 			assert(below.layer_fill_count(0) == t - 1,
 				"칸 세기가 어긋난다: %d" % below.layer_fill_count(0))
-			assert(below.clear_layers() == 0,
+			assert(below.clear_layers().size() == 0,
 				"%dx%d 난이도 %d: %d칸(기준 %d)에서 지워지면 안 된다" % [size, size, d, t - 1, t])
 			assert(below.layer_fill_count(0) == t - 1, "안 지워졌으면 칸이 그대로 남아야 한다")
 
 			var at := Board.new()
 			_fill(at, 0, t)
-			assert(at.clear_layers() == 1,
+			assert(at.clear_layers().size() == 1,
 				"%dx%d 난이도 %d: %d칸이면 지워져야 한다" % [size, size, d, t])
 			assert(at.layer_fill_count(0) == 0, "지워진 층은 비어야 한다")
 
@@ -76,10 +76,10 @@ func _test_hard_needs_every_cell() -> void:
 				if i != hole:
 					b.cells[i] = 1
 			assert(b.layer_fill_count(0) == cells - 1, "한 칸만 비어 있어야 한다")
-			assert(b.clear_layers() == 0,
+			assert(b.clear_layers().size() == 0,
 				"%dx%d 어려움: %d번 칸이 비었는데 지워졌다" % [size, size, hole])
 			b.cells[hole] = 1
-			assert(b.clear_layers() == 1, "마지막 칸을 채우면 지워져야 한다")
+			assert(b.clear_layers().size() == 1, "마지막 칸을 채우면 지워져야 한다")
 
 # 기준에 닿은 층만 사라지고, 위층은 그대로 한 칸 내려앉아야 한다.
 func _test_only_qualifying_layers_go() -> void:
@@ -91,7 +91,7 @@ func _test_only_qualifying_layers_go() -> void:
 	_fill(b, 0, t)          # 0층: 기준 충족
 	_fill(b, 1, t - 1)      # 1층: 한 칸 모자람
 	_fill(b, 2, 1)          # 2층: 한 칸
-	assert(b.clear_layers() == 1, "기준에 닿은 층은 하나뿐이다")
+	assert(b.clear_layers().size() == 1, "기준에 닿은 층은 하나뿐이다")
 	assert(b.layer_fill_count(0) == t - 1, "1층이 0층으로 내려와야 한다: %d" % b.layer_fill_count(0))
 	assert(b.layer_fill_count(1) == 1, "2층이 1층으로 내려와야 한다: %d" % b.layer_fill_count(1))
 	assert(b.layer_fill_count(2) == 0, "위쪽에는 빈 층이 생겨야 한다")

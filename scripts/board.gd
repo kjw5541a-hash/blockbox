@@ -59,12 +59,14 @@ func layer_fill_count(y: int) -> int:
 			n += 1
 	return n
 
-func clear_layers() -> int:
+# 지워진 층의 번호를 낮은 층부터 돌려준다. 층이 무너져 내리기 전 자리라,
+# 지워지는 순간 그 자리에 무언가를 띄우려면 이 번호가 필요하다.
+func clear_layers() -> PackedInt32Array:
 	var kept := PackedInt32Array()
-	var cleared := 0
+	var cleared := PackedInt32Array()
 	for y in HEIGHT:
 		if layer_fill_count(y) >= LAYER_CLEAR_THRESHOLD:
-			cleared += 1
+			cleared.append(y)
 			continue
 		kept.append_array(cells.slice(y * LAYER_CELLS, (y + 1) * LAYER_CELLS))
 	# resize 로 늘어난 칸은 0으로 채워지므로 위쪽에 빈 층이 생긴다.

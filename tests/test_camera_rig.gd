@@ -14,6 +14,10 @@ func _initialize() -> void:
 	_test_tilt_axis()
 	_test_mapping_is_pinned_to_axes()
 	_test_visual_yaw_tracks_yaw_step()
+	await _test_pitch_is_continuous_and_clamped()
+	await _test_pitch_survives_a_turn()
+	await _test_screen_rotation_axes_follow_the_view()
+	await _test_shake_returns_home()
 	print("test_camera_rig: OK")
 	quit()
 
@@ -112,3 +116,142 @@ func _test_visual_yaw_tracks_yaw_step() -> void:
 		var got := wrapf(r.yaw_degrees(), 0.0, 360.0)
 		assert(absf(want - got) < 0.001,
 			"yaw_step %d 인데 화면 각도가 %f, 기대 %f" % [r.yaw_step, got, want])
+
+
+# 상하각은 격자축 대응에 쓰이지 않으므로 90도 단위로 끊지 않는다. 대신 양 끝을
+# 막는다. 아래쪽을 열어두면 두 수평 격자축이 화면에서 겹쳐 조각 드래그가 죽는다.
+func _test_pitch_is_continuous_and_clamped() -> void:
+	var r := _rig()
+	await process_frame
+	assert(is_equal_approx(r.pitch_degrees(), CameraRig.PITCH_DEG),
+		"처음에는 기본 각도여야 한다: %f" % r.pitch_degrees())
+	assert(CameraRig.PITCH_MIN <= CameraRig.PITCH_DEG
+		and CameraRig.PITCH_DEG <= CameraRig.PITCH_MAX,
+		"기본 각도가 움직일 수 있는 범위 밖이다")
+
+	r.pitch_by(-7.5)
+	assert(is_equal_approx(r.pitch_degrees(), CameraRig.PITCH_DEG - 7.5),
+		"상하각은 끊지 않고 준 만큼 움직여야 한다: %f" % r.pitch_degrees())
+	assert(is_equal_approx(r.rotation_degrees.x, r.pitch_degrees()),
+		"실제 카메라 각도가 따라오지 않았다: %f" % r.rotation_degrees.x)
+
+	# 탑뷰를 지나쳐 뒤집히면 안 된다.
+	for _i in 100:
+		r.pitch_by(-10.0)
+	assert(is_equal_approx(r.pitch_degrees(), CameraRig.PITCH_MIN),
+		"위쪽 한계에서 멈춰야 한다: %f" % r.pitch_degrees())
+	for _i in 100:
+		r.pitch_by(10.0)
+	assert(is_equal_approx(r.pitch_degrees(), CameraRig.PITCH_MAX),
+		"아래쪽 한계에서 멈춰야 한다: %f" % r.pitch_degrees())
+	assert(is_equal_approx(r.rotation_degrees.x, CameraRig.PITCH_MAX),
+		"한계에서도 실제 카메라 각도가 맞아야 한다: %f" % r.rotation_degrees.x)
+
+	# 상하로 기울여도 어느 격자축이 화면 위인지는 달라지지 않는다.
+	var away := r.axis_away()
+	r.pitch_by(-30.0)
+	assert(r.axis_away() == away, "상하각은 격자축 대응을 건드리면 안 된다")
+	r.queue_free()
+
+# 좌우 회전은 트윈으로 돈다. 그 트윈이 벡터 전체를 건드리면, 도는 중에 기울인
+# 각도가 트윈이 시작할 때 찍어둔 값으로 도로 튕겨 나간다.
+func _test_pitch_survives_a_turn() -> void:
+	var r := _rig()
+	await process_frame
+	r.turn(1)
+	r.pitch_by(-20.0)
+	var want := CameraRig.PITCH_DEG - 20.0
+	# 트윈이 끝날 때까지 돌린다.
+	for _i in 40:
+		await process_frame
+	assert(is_equal_approx(r.pitch_degrees(), want),
+		"도는 중에 기울인 각도가 사라졌다: %f, 기대 %f" % [r.pitch_degrees(), want])
+	assert(is_equal_approx(r.rotation_degrees.x, want),
+		"도는 중에 기울인 실제 카메라 각도가 사라졌다: %f" % r.rotation_degrees.x)
+	assert(is_equal_approx(r.rotation_degrees.y, r.yaw_degrees()),
+		"좌우 회전은 그대로 끝나야 한다: %f" % r.rotation_degrees.y)
+	r.queue_free()
+
+
+# 회전 버튼은 화면 축 기준이다. 시점을 눕히면 화면 세로축과 안팎축이 서로 다른
+# 격자축으로 넘어간다 — 탑뷰에서 "화면 안쪽"은 월드 Y 아래쪽이다.
+# 판정 기준은 "세 화면 축에 격자축 셋을 겹치지 않게 붙일 때 합이 최대"다.
+# 축 하나만 따로 보면 안 된다: 시점이 45도로 틀어져 있어 수평 격자축은 화면
+# 가로/안쪽 성분을 1/√2 씩만 갖고, 그 탓에 축별 최선과 전체 최선이 다르다.
+func _test_screen_rotation_axes_follow_the_view() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	var r: CameraRig = main.rig
+	var cam: Camera3D = r.get_node("Camera3D")
+	# -45 는 두 배치의 합이 같은 경계라 양옆만 본다.
+	for pitch in [-35.0, -44.0, -46.0, -90.0]:
+		for step in 4:
+			r.yaw_step = step
+			r.pitch_by(pitch - r.pitch_degrees())
+			r.rotation_degrees.y = CameraRig.YAW_BASE_DEG + 90.0 * step
+			await process_frame
+			var basis := cam.global_transform.basis
+			var picked := [r.rot_screen_x(), r.rot_screen_y(), r.rot_screen_z()]
+			var used := {}
+			for a in picked:
+				used[a[0]] = true
+			assert(used.size() == 3,
+				"상하각 %f yaw %d: 세 버튼이 서로 다른 축이어야 한다: %s"
+				% [pitch, step, picked])
+			var got := _alignment(picked, basis)
+			var best := _best_alignment(basis)
+			assert(got >= best - 0.001,
+				"상하각 %f yaw %d: 회전축 배치 %s 가 화면과 덜 맞는다 (%f, 최선 %f)"
+				% [pitch, step, picked, got, best])
+	main.queue_free()
+
+func _axis_vec(a: Array) -> Vector3:
+	var v := [Vector3.RIGHT, Vector3.UP, Vector3.BACK][a[0]] as Vector3
+	return v * float(a[1])
+
+# 화면 가로축 / 세로축 / 안쪽축과 얼마나 겹치는지의 합.
+func _alignment(picked: Array, basis: Basis) -> float:
+	var screens := [basis.x, basis.y, -basis.z]
+	var sum := 0.0
+	for i in 3:
+		sum += _axis_vec(picked[i]).dot(screens[i])
+	return sum
+
+func _best_alignment(basis: Basis) -> float:
+	var choices := [[0, 1], [0, -1], [1, 1], [1, -1], [2, 1], [2, -1]]
+	var best := -INF
+	for a in choices:
+		for b in choices:
+			for c in choices:
+				if a[0] == b[0] or b[0] == c[0] or a[0] == c[0]:
+					continue
+				best = maxf(best, _alignment([a, b, c], basis))
+	return best
+
+
+# 층이 지워질 때의 흔들림. 카메라가 제자리로 돌아오지 않으면 판이 진행될수록
+# 시점이 조금씩 밀린다. 리그 자체를 흔들어도 같은 일이 난다.
+func _test_shake_returns_home() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	var r: CameraRig = main.rig
+	var cam: Camera3D = r.get_node("Camera3D")
+	var home := cam.position
+	var rig_home := r.position
+
+	r.shake()
+	var moved := false
+	for _i in 8:
+		await process_frame
+		if not cam.position.is_equal_approx(home):
+			moved = true
+	assert(moved, "흔들었는데 카메라가 움직이지 않았다")
+	assert(r.position.is_equal_approx(rig_home), "리그가 아니라 카메라만 흔들어야 한다")
+
+	for _i in 60:
+		await process_frame
+	assert(cam.position.is_equal_approx(home),
+		"흔들림이 끝나면 제자리로 돌아와야 한다: %s, 기대 %s" % [cam.position, home])
+	main.queue_free()

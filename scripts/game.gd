@@ -3,7 +3,9 @@ extends Node
 
 signal piece_moved
 signal piece_locked
-signal layers_cleared(count: int)
+# 지워진 층 번호와, 그 층을 채워 넣은 조각의 종류. 개수만 필요하면 ys.size().
+# 종류를 같이 보내는 건 연출용이다 — 방금 놓은 조각 색으로 불티가 튄다.
+signal layers_cleared(ys: PackedInt32Array, kind: int)
 signal game_over
 
 const BASE_FALL_INTERVAL := 1.0
@@ -173,15 +175,17 @@ func ghost_cells() -> Array[Vector3i]:
 func _lock_current() -> void:
 	if current == null:
 		return
-	board.lock(current.world_cells(), current.kind)
+	var kind := current.kind
+	board.lock(current.world_cells(), kind)
 	current = null
 	piece_locked.emit()
-	var n := board.clear_layers()
+	var ys := board.clear_layers()
+	var n := ys.size()
 	if n > 0:
 		total_layers += n
 		score += SCORE_PER_LAYER * level * CLEAR_MULTIPLIER[mini(n, 4)]
 		level = total_layers / LEVEL_UP_LAYERS + 1
-		layers_cleared.emit(n)
+		layers_cleared.emit(ys, kind)
 	_spawn()
 
 func footprint_cells() -> Array[Vector3i]:

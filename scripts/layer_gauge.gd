@@ -32,7 +32,7 @@ func _ready() -> void:
 func setup(g: Game) -> void:
 	game = g
 	game.piece_locked.connect(refresh)
-	game.layers_cleared.connect(func(_n: int) -> void: refresh())
+	game.layers_cleared.connect(func(_ys: PackedInt32Array, _kind: int) -> void: refresh())
 	refresh()
 
 func refresh() -> void:

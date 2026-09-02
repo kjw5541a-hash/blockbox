@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game.gd" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://scripts/touch_input.gd" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="7"]
 [ext_resource type="Script" path="res://scripts/box_frame.gd" id="8"]
+[ext_resource type="Script" path="res://scripts/layer_burst.gd" id="9"]
 
 [sub_resource type="Environment" id="Env"]
 background_mode = 1
@@ -50,3 +51,6 @@ script = ExtResource("6")
 
 [node name="BoxFrame" type="Node3D" parent="."]
 script = ExtResource("8")
+
+[node name="LayerBurst" type="Node3D" parent="."]
+script = ExtResource("9")
