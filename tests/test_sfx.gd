@@ -3,6 +3,7 @@ extends SceneTree
 func _initialize() -> void:
 	_test_every_name_makes_a_sound()
 	_test_move_is_a_run_of_ticks()
+	_test_lock_pitch_falls()
 	_test_echo_leaves_a_tail()
 	_test_waveforms_are_cached()
 	_test_play_without_a_host_is_quiet()
@@ -29,23 +30,42 @@ func _test_every_name_makes_a_sound() -> void:
 		assert(peak < 32000, "%s 가 포화됐다: 최대 %d" % [name, peak])
 
 # 이동 소리는 한 덩어리가 아니라 또르르 굴러가는 여러 알이어야 한다.
-# 알마다 새로 시작하므로, 시작 순간이 바로 앞보다 커진다.
+# 알마다 새로 시작하므로, 시작 순간이 바로 앞보다 커진다. 잔향을 입히기 전을
+# 본다 — 메아리도 제 나름의 시작을 만들어서 알의 시작과 구별되지 않는다.
 func _test_move_is_a_run_of_ticks() -> void:
-	var d := Sfx.stream(Sfx.MOVE).data
+	var b := Sfx._move()
 	var w := int(0.004 * Sfx.RATE)
 	for k in Sfx.MOVE_TICKS:
 		var at := int(k * Sfx.MOVE_GAP * Sfx.RATE)
 		# 첫 알 앞은 무음이다. 창을 뒤로 뺄 자리가 없다.
-		var before := 0.0 if at < w else _loudness(d, at - w, w)
-		var after := _loudness(d, at, w)
+		var before := 0.0 if at < w else _loudness(b, at - w, w)
+		var after := _loudness(b, at, w)
 		assert(after > before * 1.3,
 			"%d 번째 알이 앞과 이어져 있다: 앞 %f 뒤 %f" % [k, before, after])
 
-func _loudness(d: PackedByteArray, start: int, count: int) -> float:
+func _loudness(b: PackedFloat32Array, start: int, count: int) -> float:
 	var sum := 0.0
 	for i in range(start, start + count):
-		sum += absi(d.decode_s16(i * 2))
+		sum += absf(b[i])
 	return sum / count
+
+# 착지는 쿵이어야 한다. 쿵은 음이 순식간에 떨어져서 쿵이다 — 안 떨어지면
+# 낮은 삐 소리일 뿐이다. 음의 높이는 영점 교차 수로 센다.
+func _test_lock_pitch_falls() -> void:
+	var b := PackedFloat32Array()
+	b.resize(Sfx.RATE)
+	Sfx._thump(b, 0.0, 400.0, 50.0, 0.5, 1.0)
+	var w := int(0.01 * Sfx.RATE)
+	var early := _crossings(b, 0, w)
+	var late := _crossings(b, int(0.2 * Sfx.RATE), w)
+	assert(early > late * 2, "쿵의 음이 안 떨어진다: 앞 %d 뒤 %d" % [early, late])
+
+func _crossings(b: PackedFloat32Array, start: int, count: int) -> int:
+	var n := 0
+	for i in range(start + 1, start + count):
+		if signf(b[i]) != signf(b[i - 1]):
+			n += 1
+	return n
 
 # 잔향이 없으면 소리가 방 없이 코앞에서 난다. 충격 하나를 넣으면 지연마다
 # 메아리가 돌아와야 한다.
