@@ -13,6 +13,13 @@ run/main_scene="res://scenes/start.tscn"
 config/icon="res://assets/icon.png"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
+[autoload]
+
+; 소리는 씬을 바꿔도 끊기면 안 된다 — 시작 버튼은 소리를 내고 곧바로 씬을
+; 갈아치운다. 자동 로드 이름을 SfxHost 로 둔 것은 class_name Sfx 와 이름이
+; 겹치지 않게 하려는 것뿐이다. 부를 때는 언제나 Sfx.play() 를 쓴다.
+SfxHost="*res://scripts/sfx.gd"
+
 [display]
 
 window/size/viewport_width=720

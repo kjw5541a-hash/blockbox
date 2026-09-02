@@ -1,6 +1,9 @@
 extends Control
 
 func _ready() -> void:
+	# 메뉴의 모든 버튼이 딸깍한다 — 크기와 난이도 고르는 것도 조작이다.
+	for b in find_children("*", "Button", true, false):
+		(b as Button).pressed.connect(Sfx.play.bind(Sfx.UI))
 	$Center/Menu/Start.pressed.connect(_on_start)
 	$Center/Menu/Best.text = "최고 기록 %d" % SaveData.load_high_score()
 	# 폰에서 캐시된 옛 빌드를 보고 있는 건 아닌지 눈으로 확인할 수 있게 찍어 둔다.

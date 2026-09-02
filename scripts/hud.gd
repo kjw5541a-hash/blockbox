@@ -12,6 +12,10 @@ func setup(g: Game, r: CameraRig) -> void:
 	$Bottom/RotateDown.pressed.connect(_rotate.bind(rig.rot_screen_down))
 	$Bottom/RotateClock.pressed.connect(_rotate.bind(rig.rot_screen_clockwise))
 	$Bottom/Drop.pressed.connect(func() -> void: game.hard_drop())
+	# 회전과 내리기는 조각이 실제로 움직였을 때 Game 이 소리를 낸다. 막혀서
+	# 아무 일도 안 일어났으면 소리도 나면 안 된다. 나머지 버튼만 여기서 딸깍.
+	$Side/Pause.pressed.connect(Sfx.play.bind(Sfx.UI))
+	$Side/Quit.pressed.connect(Sfx.play.bind(Sfx.UI))
 	$Side/Pause.pressed.connect(toggle_pause)
 	$Side/Quit.pressed.connect(quit_to_menu)
 	game.layers_cleared.connect(_on_cleared)

@@ -71,6 +71,7 @@ func yaw_degrees() -> float:
 	return _yaw_target
 
 func turn(dir: int) -> void:
+	Sfx.play(Sfx.TURN)
 	yaw_step = wrapi(yaw_step + dir, 0, 4)
 	_yaw_target += 90.0 * dir
 	if not is_inside_tree():

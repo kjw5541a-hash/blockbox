@@ -93,6 +93,7 @@ func _spawn() -> void:
 	if not board.is_valid(p.world_cells()):
 		current = null
 		is_over = true
+		Sfx.play(Sfx.OVER)
 		game_over.emit()
 		return
 	current = p
@@ -113,6 +114,10 @@ func move(delta: Vector3i) -> bool:
 	if not board.is_valid(moved.world_cells()):
 		return false
 	current = moved
+	# 소리는 좌우 이동에만 붙인다. 중력 낙하도 이 함수를 거치는데, 매 칸마다
+	# 드르륵거리면 조작이 아니라 잡음이 된다.
+	if delta.y == 0:
+		Sfx.play(Sfx.MOVE)
 	_on_piece_changed()
 	return true
 
@@ -160,6 +165,7 @@ func step(delta: float) -> void:
 func hard_drop() -> void:
 	if current == null or is_over or paused:
 		return
+	Sfx.play(Sfx.DROP)
 	while move(Vector3i(0, -1, 0)):
 		pass
 	_lock_current()
@@ -181,6 +187,7 @@ func _lock_current() -> void:
 		return
 	var kind := current.kind
 	board.lock(current.world_cells(), kind)
+	Sfx.play(Sfx.LOCK)
 	current = null
 	piece_locked.emit()
 	var ys := board.clear_layers()
@@ -188,7 +195,11 @@ func _lock_current() -> void:
 	if n > 0:
 		total_layers += n
 		score += SCORE_PER_LAYER * level * CLEAR_MULTIPLIER[mini(n, 4)]
+		var was := level
 		level = total_layers / LEVEL_UP_LAYERS + 1
+		Sfx.play(Sfx.CLEAR)
+		if level > was:
+			Sfx.play(Sfx.LEVEL)
 		layers_cleared.emit(ys, kind)
 	_spawn()
 
@@ -201,6 +212,7 @@ func rotate(axis: int, dir: int) -> bool:
 		candidate.origin = current.origin + k
 		if board.is_valid(candidate.world_cells()):
 			current = candidate
+			Sfx.play(Sfx.ROTATE)
 			_on_piece_changed()
 			return true
 	return false
