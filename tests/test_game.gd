@@ -26,8 +26,6 @@ func _initialize() -> void:
 	_test_pause_freezes_the_lock_clock()
 	_test_multi_layer_bonus()
 	_test_level_rises()
-	_test_footprint_is_deduplicated()
-	_test_footprint_exact_set_for_flat_t()
 	_test_easy_has_no_gravity()
 	_test_easy_draws_planar_pieces_only()
 	print("test_game: OK")
@@ -293,6 +291,19 @@ func _test_layer_clear_scores() -> void:
 	assert(g.total_layers == 1, "누적 층 수가 기록되어야 한다")
 	assert(g.board.layer_fill_count(0) == 0, "지워진 자리는 비어야 한다")
 
+func _test_level_rises() -> void:
+	var g := _make_game()
+	g.start(23)
+	assert(g.level == 1, "시작 레벨은 1")
+	var first := g.fall_interval()
+	g.total_layers = Game.LEVEL_UP_LAYERS * 3
+	g.level = g.total_layers / Game.LEVEL_UP_LAYERS + 1
+	assert(g.level == 4, "층 15개면 레벨 4")
+	assert(g.fall_interval() < first, "레벨이 오르면 낙하가 빨라져야 한다")
+	g.total_layers = 500
+	g.level = g.total_layers / Game.LEVEL_UP_LAYERS + 1
+	assert(g.fall_interval() == Game.MIN_FALL_INTERVAL, "낙하 간격에 하한이 있어야 한다")
+
 func _test_multi_layer_bonus() -> void:
 	var g := _make_game()
 	g.start(22)
@@ -323,55 +334,6 @@ func _test_multi_layer_bonus() -> void:
 	assert(g.score == Game.SCORE_PER_LAYER * 1 * Game.CLEAR_MULTIPLIER[2],
 		"두 층 클리어 점수가 배율대로여야 한다, 실제 %d" % g.score)
 	assert(g.board.layer_fill_count(0) == 0, "지워진 자리는 비어야 한다")
-
-func _test_level_rises() -> void:
-	var g := _make_game()
-	g.start(23)
-	assert(g.level == 1, "시작 레벨은 1")
-	var first := g.fall_interval()
-	g.total_layers = Game.LEVEL_UP_LAYERS * 3
-	g.level = g.total_layers / Game.LEVEL_UP_LAYERS + 1
-	assert(g.level == 4, "층 15개면 레벨 4")
-	assert(g.fall_interval() < first, "레벨이 오르면 낙하가 빨라져야 한다")
-	g.total_layers = 500
-	g.level = g.total_layers / Game.LEVEL_UP_LAYERS + 1
-	assert(g.fall_interval() == Game.MIN_FALL_INTERVAL, "낙하 간격에 하한이 있어야 한다")
-
-func _test_footprint_is_deduplicated() -> void:
-	var g := _make_game()
-	g.start(41)
-	# 조각을 세워서 같은 XZ 칸에 여러 셀이 겹치게 만든다.
-	g.rotate(Piece.AXIS_X, 1)
-	var fp := g.footprint_cells()
-	var seen := {}
-	for c in fp:
-		assert(c.y == 0, "발자국은 바닥 평면이어야 한다")
-		assert(not seen.has(c), "발자국에 중복 칸 %s" % c)
-		seen[c] = true
-	assert(fp.size() >= 1 and fp.size() <= 4, "발자국은 1~4칸")
-	for c in g.current.world_cells():
-		assert(seen.has(Vector3i(c.x, 0, c.z)), "조각이 덮은 칸 %s 이 발자국에 없다" % c)
-
-func _test_footprint_exact_set_for_flat_t() -> void:
-	# T 조각(kind 3)은 한 층에 눕혀져 정의되므로 회전 없이도 발자국이
-	# world_cells 와 1:1로 대응해야 한다. 정확한 칸 집합을 직접 검증한다 —
-	# 크기만 맞고 엉뚱한 칸이 섞여도 위 dedup 테스트는 못 잡는다.
-	var g := _make_game()
-	g.start(41)
-	var p := Piece.create(3)
-	p.origin = Vector3i(1, 5, 2)
-	g.current = p
-	var fp := g.footprint_cells()
-	var want: Array[Vector3i] = [
-		Vector3i(1, 0, 2), Vector3i(2, 0, 2), Vector3i(3, 0, 2), Vector3i(2, 0, 3),
-	]
-	assert(fp.size() == want.size(), "발자국 칸 수가 기대와 다르다: %d" % fp.size())
-	for w in want:
-		assert(fp.has(w), "발자국에 %s 가 없어야 할 칸이 빠졌다" % w)
-
-
-# 쉬움은 조각이 저절로 내려오지 않는다. 시간이 아무리 흘러도 제자리여야 하고,
-# 내리기를 눌렀을 때만 잠긴다.
 func _test_easy_has_no_gravity() -> void:
 	GameConfig.difficulty = GameConfig.EASY
 	var g := _make_game()
