@@ -1,8 +1,11 @@
 extends Node3D
 
 const GHOST_ALPHA := 0.28
-const FOOTPRINT_ALPHA := 0.45
-const FOOTPRINT_Y := -0.48
+# 착지 자리 표시는 고스트의 윗면에 얹는다. 바닥에만 자국을 깔면 블럭이 아니라
+# 바닥에 붙은 그림자로 보인다 — 윗면이 진해야 덩어리로 읽힌다.
+const TOP_ALPHA := 0.55
+# 고스트 윗면과 같은 높이면 서로 깜빡이며 다툰다. 살짝 띄운다.
+const TOP_LIFT := 0.505
 
 var game: Game = null
 
@@ -11,7 +14,7 @@ var _ghost: MeshInstance3D = null
 var _marks: Array[MeshInstance3D] = []
 
 func _ready() -> void:
-	# 발자국은 칸 크기 그대로 깔아 옆 칸과 맞닿게 한다. 사이에 틈을 두면
+	# 윗면 판은 칸 크기 그대로 깔아 옆 칸과 맞닿게 한다. 사이에 틈을 두면
 	# 붙어 있는 조각인데도 칸이 하나씩 따로 놀아 보인다.
 	var quad := QuadMesh.new()
 	quad.size = Vector2.ONE
@@ -61,12 +64,26 @@ func refresh() -> void:
 	_ghost.mesh = BlockMesh.hull_mesh(game.ghost_cells())
 	_show(_ghost, Vector3.ZERO, color, GHOST_ALPHA)
 
-	var fp := game.footprint_cells()
+	var tops := top_cells(game.ghost_cells())
 	for i in _marks.size():
-		if i >= fp.size():
+		if i >= tops.size():
 			_marks[i].visible = false
 			continue
-		_show(_marks[i], Vector3(fp[i].x, FOOTPRINT_Y, fp[i].z), color, FOOTPRINT_ALPHA)
+		var c := tops[i]
+		_show(_marks[i], Vector3(c.x, c.y + TOP_LIFT, c.z), color, TOP_ALPHA)
+
+# 칸 목록에서 세로줄마다 가장 높은 칸만 남긴다. 그 칸의 윗면이 곧 덩어리의
+# 윗면이다.
+static func top_cells(cells: Array[Vector3i]) -> Array[Vector3i]:
+	var top := {}
+	for c in cells:
+		var col := Vector2i(c.x, c.z)
+		if not top.has(col) or c.y > top[col]:
+			top[col] = c.y
+	var out: Array[Vector3i] = []
+	for col in top:
+		out.append(Vector3i(col.x, top[col], col.y))
+	return out
 
 func _show(m: MeshInstance3D, pos: Vector3, color: Color, alpha: float) -> void:
 	m.visible = true

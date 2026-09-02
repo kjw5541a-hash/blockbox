@@ -17,6 +17,7 @@ func _initialize() -> void:
 	await _test_pitch_is_continuous_and_clamped()
 	await _test_pitch_survives_a_turn()
 	await _test_screen_rotation_axes_follow_the_view()
+	await _test_screen_rotation_turns_the_way_the_arrows_point()
 	await _test_shake_returns_home()
 	print("test_camera_rig: OK")
 	quit()
@@ -192,7 +193,7 @@ func _test_screen_rotation_axes_follow_the_view() -> void:
 			r.rotation_degrees.y = CameraRig.YAW_BASE_DEG + 90.0 * step
 			await process_frame
 			var basis := cam.global_transform.basis
-			var picked := [r.rot_screen_x(), r.rot_screen_y(), r.rot_screen_z()]
+			var picked := [r.rot_screen_down(), r.rot_screen_right(), r.rot_screen_clockwise()]
 			var used := {}
 			for a in picked:
 				used[a[0]] = true
@@ -206,16 +207,48 @@ func _test_screen_rotation_axes_follow_the_view() -> void:
 				% [pitch, step, picked, got, best])
 	main.queue_free()
 
-func _axis_vec(a: Array) -> Vector3:
-	var v := [Vector3.RIGHT, Vector3.UP, Vector3.BACK][a[0]] as Vector3
-	return v * float(a[1])
+# 버튼에는 이제 축 이름 대신 화살표가 그려져 있다. 그림과 실제로 도는 방향이
+# 다르면 그림이 없느니만 못하다. 회전축을 카메라 기준으로 풀면 앞면이 어디로
+# 흐르는지가 부호 하나로 나온다: 화면 세로축 성분이 +면 앞면이 오른쪽으로,
+# 화면 가로축 성분이 +면 앞면이 아래로, 시선축 성분이 -면 시계 방향이다.
+func _test_screen_rotation_turns_the_way_the_arrows_point() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	var r: CameraRig = main.rig
+	var cam: Camera3D = r.get_node("Camera3D")
+	for pitch in [-35.0, -44.0, -46.0, -90.0]:
+		for step in 4:
+			r.yaw_step = step
+			r.pitch_by(pitch - r.pitch_degrees())
+			r.rotation_degrees.y = CameraRig.YAW_BASE_DEG + 90.0 * step
+			await process_frame
+			var basis := cam.global_transform.basis
+			var right := _spin(r.rot_screen_right()).dot(basis.y)
+			assert(right > 0.5,
+				"상하각 %f yaw %d: 앞면이 오른쪽으로 흐르지 않는다 (%f)" % [pitch, step, right])
+			var down := _spin(r.rot_screen_down()).dot(basis.x)
+			assert(down > 0.5,
+				"상하각 %f yaw %d: 앞면이 아래로 넘어가지 않는다 (%f)" % [pitch, step, down])
+			var clock := _spin(r.rot_screen_clockwise()).dot(basis.z)
+			assert(clock < -0.5,
+				"상하각 %f yaw %d: 시계 방향으로 돌지 않는다 (%f)" % [pitch, step, clock])
+	main.queue_free()
+
+# [axis, dir] 이 실제로 어느 쪽으로 도는지를 오른손 법칙 축으로 돌려준다.
+# Piece.rotate_cell 을 직접 먹여 보므로 부호 규약을 따로 알 필요가 없다.
+func _spin(pick: Array) -> Vector3:
+	var cols: Array[Vector3] = []
+	for v in [Vector3i(1, 0, 0), Vector3i(0, 1, 0), Vector3i(0, 0, 1)]:
+		cols.append(Vector3(Piece.rotate_cell(v, pick[0], pick[1])))
+	return Basis(cols[0], cols[1], cols[2]).get_rotation_quaternion().get_axis()
 
 # 화면 가로축 / 세로축 / 안쪽축과 얼마나 겹치는지의 합.
 func _alignment(picked: Array, basis: Basis) -> float:
 	var screens := [basis.x, basis.y, -basis.z]
 	var sum := 0.0
 	for i in 3:
-		sum += _axis_vec(picked[i]).dot(screens[i])
+		sum += _spin(picked[i]).dot(screens[i])
 	return sum
 
 func _best_alignment(basis: Basis) -> float:

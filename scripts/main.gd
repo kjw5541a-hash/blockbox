@@ -17,11 +17,31 @@ func _ready() -> void:
 	piece_view.setup(game)
 	$LayerBurst.setup(game)
 	touch_input.setup(game, rig)
+	_fit_box_to_the_left()
 	# 층이 지워지면 통이 흔들린다. 흔드는 건 카메라 몫이라 여기서 잇는다.
 	game.layers_cleared.connect(
 		func(_ys: PackedInt32Array, _kind: int) -> void: rig.shake())
 	game.start()
 	$HUD.setup(game, rig)
+
+# 점수와 버튼이 오른쪽 세로 패널로 모여 있어 통은 왼쪽에 붙는다. 밀 수 있는
+# 폭은 통 크기에 따라 다르다 — 6x6 은 화면 폭을 거의 다 쓰므로 밀 자리가 없다.
+# 그래서 고정값 대신 통이 화면에서 실제로 차지하는 자리를 재서 정한다.
+# 왼쪽 층 게이지와의 간격, 화면 가장자리 여백이 한계다.
+const BOX_GAUGE_GAP := 48.0
+const BOX_EDGE_MARGIN := 40.0
+
+func _fit_box_to_the_left() -> void:
+	var cam := rig.get_node("Camera3D") as Camera3D
+	cam.h_offset = 0.0
+	var left: float = touch_input.box_screen_rect().position.x
+	# 게이지 오른쪽 끝. 앵커가 왼쪽이라 배치 계산 전에도 offset 이 곧 위치다.
+	var gauge_right: float = $HUD/LayerGauge.offset_right
+	var room := maxf(0.0, left - BOX_EDGE_MARGIN)
+	var shift := clampf(left - (gauge_right + BOX_GAUGE_GAP), 0.0, room)
+	# 직교 투영이라 화면 픽셀과 월드 단위의 비가 화면 어디서나 같다.
+	var per_unit: float = get_viewport().get_visible_rect().size.y / cam.size
+	cam.h_offset = shift / per_unit
 
 func _process(delta: float) -> void:
 	game.step(delta)
@@ -43,13 +63,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_SPACE:
 			game.hard_drop()
 		KEY_Z:
-			var a: Array = rig.rot_screen_x()
+			var a: Array = rig.rot_screen_down()
 			game.rotate(a[0], a[1])
 		KEY_X:
-			var a: Array = rig.rot_screen_y()
+			var a: Array = rig.rot_screen_right()
 			game.rotate(a[0], a[1])
 		KEY_C:
-			var a: Array = rig.rot_screen_z()
+			var a: Array = rig.rot_screen_clockwise()
 			game.rotate(a[0], a[1])
 		KEY_Q:
 			rig.turn(-1)

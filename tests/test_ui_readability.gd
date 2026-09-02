@@ -8,6 +8,7 @@ func _initialize() -> void:
 	await _test_buttons_stand_out_from_the_background()
 	await _test_text_is_big_enough_to_read()
 	await _test_game_buttons_keep_their_size()
+	await _test_box_does_not_sit_under_the_hud()
 	print("test_ui_readability: OK")
 	quit()
 
@@ -89,3 +90,40 @@ func _test_game_buttons_keep_their_size() -> void:
 		assert(font_size <= 24,
 			"게임 화면 버튼 글자가 커졌다: %s %d" % [b.name, font_size])
 	hud.queue_free()
+
+
+# 점수와 버튼이 오른쪽 세로 패널로 모였으니 통은 왼쪽으로, 그리고 위로 비켜
+# 서야 한다. 카메라의 h_offset/v_offset 이 그 일을 한다 — 여기서 지키는 건
+# 통이 패널과 하단 버튼 줄을 침범하지 않는다는 것이다.
+func _test_box_does_not_sit_under_the_hud() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+
+	var hud: CanvasLayer = main.get_node("HUD")
+	var side: Control = hud.get_node("Side")
+	var bottom: Control = hud.get_node("Bottom")
+	var gauge: Control = hud.get_node("LayerGauge")
+	var screen: Vector2 = main.get_viewport().get_visible_rect().size
+	# 스치듯 붙어 있으면 겹치지 않아도 겹쳐 보인다. 손가락 하나 폭은 띄운다.
+	var gap := 40.0
+
+	# 상하각을 끝에서 끝까지 돌려도 지켜져야 한다. 통은 눕힐수록 위아래로 길어진다.
+	for pitch in [CameraRig.PITCH_MAX, CameraRig.PITCH_DEG, CameraRig.PITCH_MIN]:
+		main.rig.pitch_by(pitch - main.rig._pitch)
+		await process_frame
+		var rect: Rect2 = main.touch_input.box_screen_rect()
+		assert(rect.end.x <= side.position.x - gap,
+			"상하각 %.0f 에서 통이 오른쪽 패널에 붙는다: %s / 패널 x %f"
+				% [pitch, rect, side.position.x])
+		assert(rect.end.y <= bottom.position.y - gap * 2.0,
+			"상하각 %.0f 에서 통이 하단 버튼 줄에 붙는다: %s / 버튼 줄 y %f"
+				% [pitch, rect, bottom.position.y])
+		assert(rect.position.x >= gauge.position.x + gauge.size.x + gap,
+			"상하각 %.0f 에서 통이 왼쪽 층 게이지에 붙는다: %s / 게이지 끝 %f"
+				% [pitch, rect, gauge.position.x + gauge.size.x])
+		assert(rect.position.x >= 0.0 and rect.position.y >= 0.0
+				and rect.end.x <= screen.x,
+			"상하각 %.0f 에서 통이 화면 밖으로 나갔다: %s" % [pitch, rect])
+
+	main.queue_free()

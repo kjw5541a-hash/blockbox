@@ -120,10 +120,25 @@ func _test_ghost_is_one_mesh_that_follows_the_piece() -> void:
 	assert(after.position.is_equal_approx(before.position + Vector3(1, 0, 0)),
 		"조각을 옮기면 고스트도 같이 옮겨져야 한다: %s -> %s" % [before.position, after.position])
 
-	# 바닥 발자국도 옆 칸과 맞닿아야 한 덩어리로 보인다.
+	# 착지 자리 표시는 고스트의 윗면에 얹는다. 바닥에 자국을 깔면 블럭이 아니라
+	# 바닥에 붙은 그림자로 보인다. 판끼리는 맞닿아야 한 덩어리로 읽힌다.
 	var mark: MeshInstance3D = view._marks[0]
 	assert((mark.mesh as QuadMesh).size.is_equal_approx(Vector2.ONE),
-		"발자국 사이에 틈이 있으면 칸이 따로 놀아 보인다: %s" % (mark.mesh as QuadMesh).size)
+		"윗면 판 사이에 틈이 있으면 칸이 따로 놀아 보인다: %s" % (mark.mesh as QuadMesh).size)
+	assert(view.TOP_ALPHA > view.GHOST_ALPHA, "윗면이 고스트보다 진해야 덩어리로 보인다")
+	var tops: Array[Vector3i] = view.top_cells(game.ghost_cells())
+	var shown := 0
+	for m in view._marks:
+		if not m.visible:
+			continue
+		shown += 1
+		assert(tops.has(Vector3i(roundi(m.position.x), roundi(m.position.y - view.TOP_LIFT),
+				roundi(m.position.z))),
+			"윗면 판이 고스트 맨 윗칸 위가 아니다: %s / 윗칸 %s" % [m.position, tops])
+		assert(m.position.y > float(Piece.bbox_min(game.ghost_cells()).y),
+			"윗면 판이 바닥에 깔렸다: %s" % m.position)
+	assert(shown == tops.size(),
+		"윗면 판 수가 맨 윗칸 수와 다르다: %d, 윗칸 %d" % [shown, tops.size()])
 
 	game.queue_free()
 	view.queue_free()

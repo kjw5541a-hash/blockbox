@@ -192,19 +192,6 @@ func _lock_current() -> void:
 		layers_cleared.emit(ys, kind)
 	_spawn()
 
-func footprint_cells() -> Array[Vector3i]:
-	var out: Array[Vector3i] = []
-	if current == null:
-		return out
-	var seen := {}
-	for c in current.world_cells():
-		var flat := Vector3i(c.x, 0, c.z)
-		if seen.has(flat):
-			continue
-		seen[flat] = true
-		out.append(flat)
-	return out
-
 func rotate(axis: int, dir: int) -> bool:
 	if current == null or is_over or paused:
 		return false

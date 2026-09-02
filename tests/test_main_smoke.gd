@@ -86,8 +86,22 @@ func _initialize() -> void:
 
 	# HUD 가 게임 상태를 실제로 따라가는지 확인한다.
 	var hud: CanvasLayer = main.get_node("HUD")
-	assert(hud.get_node("Side/NextSwatch").color == BlockColors.of(game.next_kind),
-		"다음 조각 색 견본이 실제 next_kind 와 어긋난다")
+	# 미리보기는 색뿐 아니라 모양도 보여야 한다. 다음 조각 껍데기와 같은 메시가
+	# 걸려 있는지 크기로 확인한다 — 색 견본이던 시절엔 8종이 죄다 같은 네모였다.
+	var preview: SubViewport = hud.get_node("Side/NextBox/NextView")
+	var shown := (preview._mesh.mesh as ArrayMesh).get_aabb().size
+	var next_cells := Piece.create(game.next_kind).cells
+	var want_size := Vector3(Piece.bbox_max(next_cells) - Piece.bbox_min(next_cells)) + Vector3.ONE
+	assert(shown.is_equal_approx(want_size),
+		"미리보기 모양이 다음 조각과 다르다: %s, 기대 %s" % [shown, want_size])
+	# 조각마다 뻗은 방향이 달라, 가운데로 맞추지 않으면 미리보기 밖으로 삐져나간다.
+	var lo := Vector3(Piece.bbox_min(next_cells))
+	var hi := Vector3(Piece.bbox_max(next_cells))
+	assert(preview._mesh.position.is_equal_approx(-(lo + hi) * 0.5),
+		"미리보기 조각이 가운데에 있지 않다: %s" % preview._mesh.position)
+	var preview_mat := preview._mesh.material_override as StandardMaterial3D
+	assert(preview_mat.albedo_color == BlockColors.of(game.next_kind),
+		"미리보기 색이 실제 next_kind 와 어긋난다")
 
 	# 회전 버튼 셋이 각자 제 화면 축에 물려 있는지 본다. 버튼이 서로 바뀌어도
 	# 조각은 어쨌든 돌아가므로, 같은 축으로 직접 돌린 모양과 대조한다.
@@ -96,12 +110,20 @@ func _initialize() -> void:
 	probe.origin = game.current.origin
 	game.current = probe
 	var picks := {
-		"RotateX": main.rig.rot_screen_x(),
-		"RotateY": main.rig.rot_screen_y(),
-		"RotateZ": main.rig.rot_screen_z(),
+		"RotateRight": main.rig.rot_screen_right(),
+		"RotateDown": main.rig.rot_screen_down(),
+		"RotateClock": main.rig.rot_screen_clockwise(),
+	}
+	# 버튼에 그려진 화살표가 그 버튼이 실제로 도는 방향과 짝이 맞아야 한다.
+	var icons := {
+		"RotateRight": RotateIcon.RIGHT,
+		"RotateDown": RotateIcon.DOWN,
+		"RotateClock": RotateIcon.CLOCK,
 	}
 	for button_name in picks:
 		var axis: Array = picks[button_name]
+		assert(hud.get_node("Bottom/%s/Icon" % button_name).kind == icons[button_name],
+			"%s 버튼에 엉뚱한 화살표가 그려져 있다" % button_name)
 		var before: Array[Vector3i] = game.current.cells
 		var turned: Array[Vector3i] = game.current.rotated(axis[0], axis[1]).cells
 		assert(turned != before, "%s: 나사 조각은 어느 축으로든 모양이 바뀌어야 한다" % button_name)

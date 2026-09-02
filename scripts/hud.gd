@@ -6,9 +6,11 @@ var rig: CameraRig = null
 func setup(g: Game, r: CameraRig) -> void:
 	game = g
 	rig = r
-	$Bottom/RotateX.pressed.connect(_rotate.bind(rig.rot_screen_x))
-	$Bottom/RotateY.pressed.connect(_rotate.bind(rig.rot_screen_y))
-	$Bottom/RotateZ.pressed.connect(_rotate.bind(rig.rot_screen_z))
+	# 버튼은 축 이름이 아니라 화면에서 조각이 도는 방향으로 나뉜다.
+	# 좌->우 는 세로축, 상->하 는 화면 가로축, 시계는 시선축 회전이다.
+	$Bottom/RotateRight.pressed.connect(_rotate.bind(rig.rot_screen_right))
+	$Bottom/RotateDown.pressed.connect(_rotate.bind(rig.rot_screen_down))
+	$Bottom/RotateClock.pressed.connect(_rotate.bind(rig.rot_screen_clockwise))
 	$Bottom/Drop.pressed.connect(func() -> void: game.hard_drop())
 	$Side/Pause.pressed.connect(toggle_pause)
 	$Side/Quit.pressed.connect(quit_to_menu)
@@ -19,6 +21,7 @@ func setup(g: Game, r: CameraRig) -> void:
 	game.game_over.connect(_on_game_over)
 	$GameOver.visible = false
 	$Paused.visible = false
+	$Side/NextBox/NextView.setup(game)
 	_refresh_score()
 	_refresh_next()
 	$LayerGauge.setup(game)
@@ -32,10 +35,10 @@ func _on_cleared(_ys: PackedInt32Array, _kind: int) -> void:
 	$Flash.modulate.a = FLASH_ALPHA
 	create_tween().tween_property($Flash, "modulate:a", 0.0, FLASH_TIME)
 
-# 다음 조각 미리보기. 3D 미니 뷰포트 대신 색 견본 하나로 보여준다.
-# 조각 종류는 색으로 구분되므로 이것으로 충분하다.
+# 다음 조각 미리보기. 색만으로는 3D 조각 8종을 구분하기 어려워 작은 3D 뷰에
+# 모양까지 그린다.
 func _refresh_next() -> void:
-	$Side/NextSwatch.color = BlockColors.of(game.next_kind)
+	$Side/NextBox/NextView.refresh()
 
 # 회전 축은 화면 기준이다. 어떤 격자축이 되는지는 CameraRig 가 지금 시점을
 # 보고 정한다 — 버튼은 축을 고르는 함수를 들고 있다가 누를 때마다 새로 묻는다.

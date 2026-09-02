@@ -119,16 +119,26 @@ func tilt_axis(v: Vector3i) -> Array:
 # 가장 잘 맞는 배치가 그 각도에서 뒤집힌다. 경계값(기본 시점)은 눕히기 전 쪽.
 const SCREEN_AXIS_CROSS := -45.0
 
-func rot_screen_x() -> Array:
-	return tilt_axis(axis_right())
+# 앞면이 화면에서 어느 쪽으로 흐르는지가 이름이다. 버튼에 그려진 화살표가
+# 곧 이 이름이다 — 축 이름으로 부르면 시점을 돌린 뒤 그림과 어긋난다.
+# Piece.rotate_cell 의 dir 은 오른손 법칙과 반대로 돌므로 부호를 뒤집는다.
+func _screen_turn(v: Vector3i) -> Array:
+	var a := tilt_axis(v)
+	return [a[0], -a[1]]
 
-func rot_screen_y() -> Array:
+# 앞면이 위에서 아래로 넘어간다.
+func rot_screen_down() -> Array:
+	return _screen_turn(axis_right())
+
+# 앞면이 왼쪽에서 오른쪽으로 흐른다.
+func rot_screen_right() -> Array:
 	if _pitch < SCREEN_AXIS_CROSS:
-		return tilt_axis(axis_away())
-	return [Piece.AXIS_Y, 1]
+		return _screen_turn(axis_away())
+	return [Piece.AXIS_Y, -1]
 
-func rot_screen_z() -> Array:
+# 화면에서 시계 방향으로 돈다.
+func rot_screen_clockwise() -> Array:
 	if _pitch < SCREEN_AXIS_CROSS:
 		# 탑뷰에서 화면 안쪽은 곧장 아래다.
-		return [Piece.AXIS_Y, -1]
-	return tilt_axis(axis_away())
+		return [Piece.AXIS_Y, 1]
+	return _screen_turn(axis_away())

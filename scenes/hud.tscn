@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/hud.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/layer_gauge.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/next_view.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/rotate_icon.gd" id="4"]
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1")
@@ -28,9 +30,15 @@ horizontal_alignment = 2
 text = "다음"
 mouse_filter = 2
 
-[node name="NextSwatch" type="ColorRect" parent="Side"]
-custom_minimum_size = Vector2(0, 48)
+[node name="NextBox" type="SubViewportContainer" parent="Side"]
+custom_minimum_size = Vector2(0, 120)
+stretch = true
 mouse_filter = 2
+
+[node name="NextView" type="SubViewport" parent="Side/NextBox"]
+handle_input_locally = false
+size = Vector2i(160, 120)
+script = ExtResource("3")
 
 [node name="Pause" type="Button" parent="Side"]
 custom_minimum_size = Vector2(0, 72)
@@ -50,26 +58,44 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_top = -140.0
 
-[node name="RotateX" type="Button" parent="Bottom"]
+[node name="RotateRight" type="Button" parent="Bottom"]
 custom_minimum_size = Vector2(0, 116)
 theme_override_font_sizes/font_size = 22
 size_flags_horizontal = 3
 focus_mode = 0
-text = "X 회전"
 
-[node name="RotateY" type="Button" parent="Bottom"]
-custom_minimum_size = Vector2(0, 116)
-theme_override_font_sizes/font_size = 22
-size_flags_horizontal = 3
-focus_mode = 0
-text = "Y 회전"
+[node name="Icon" type="Control" parent="Bottom/RotateRight"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("4")
+kind = 0
 
-[node name="RotateZ" type="Button" parent="Bottom"]
+[node name="RotateDown" type="Button" parent="Bottom"]
 custom_minimum_size = Vector2(0, 116)
 theme_override_font_sizes/font_size = 22
 size_flags_horizontal = 3
 focus_mode = 0
-text = "Z 회전"
+
+[node name="Icon" type="Control" parent="Bottom/RotateDown"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("4")
+kind = 1
+
+[node name="RotateClock" type="Button" parent="Bottom"]
+custom_minimum_size = Vector2(0, 116)
+theme_override_font_sizes/font_size = 22
+size_flags_horizontal = 3
+focus_mode = 0
+
+[node name="Icon" type="Control" parent="Bottom/RotateClock"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("4")
+kind = 2
 
 [node name="Drop" type="Button" parent="Bottom"]
 custom_minimum_size = Vector2(0, 116)
