@@ -25,9 +25,11 @@ renderer/rendering_method="forward_plus"
 
 ; 웹에는 시스템 폰트가 없고 Godot 내장 폰트에는 한글 글리프가 없다.
 ; 폰트를 지정하지 않으면 아이폰 사파리에서 한글이 전부 깨진다.
-theme/custom_font="res://assets/fonts/NotoSansKR-subset.ttf"
-; 720x1280 뷰포트가 폰 화면 폭으로 줄어드므로 기본 16 은 읽을 수 없다.
-theme/default_font_size=36
+;
+; 글꼴, 글자 크기, 버튼 모양을 전부 이 테마 하나에 둔다. 여기 있던
+; theme/default_font_size 는 실제로 먹지 않아서 (ThemeDB.fallback_font_size 가
+; 16 그대로였다) 폰에서 모든 글씨가 16pt 로 나왔다.
+theme/custom="res://assets/ui/theme.tres"
 
 [input_devices]
 

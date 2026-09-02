@@ -1,0 +1,9 @@
+[gd_resource type="FontVariation" load_steps=2 format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/NotoSansKR-subset.ttf" id="1"]
+
+; 굵은 글꼴 파일을 따로 넣지 않고 있는 글꼴을 두껍게 그린다. 부분집합을
+; 하나 더 만들어 두 벌을 같은 글자 목록으로 맞춰 두는 수고가 없어진다.
+[resource]
+base_font = ExtResource("1")
+variation_embolden = 0.35

@@ -1,0 +1,60 @@
+[gd_resource type="Theme" load_steps=6 format=3]
+
+[ext_resource type="FontVariation" path="res://assets/fonts/NotoSansKR-bold.tres" id="1"]
+
+; 배경이 거의 검정(0.05, 0.06, 0.09)이라 기본 테마의 어두운 회색 버튼은
+; 배경에 묻힌다. 버튼 바탕을 밝히고 테두리를 둘러 경계를 만든다.
+
+[sub_resource type="StyleBoxFlat" id="Normal"]
+bg_color = Color(0.16, 0.19, 0.28, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.34, 0.4, 0.56, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="Hover"]
+bg_color = Color(0.22, 0.26, 0.37, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.45, 0.52, 0.7, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+; 고른 항목. 통 크기와 난이도는 이 상태로만 구분되므로 확실히 밝아야 한다.
+[sub_resource type="StyleBoxFlat" id="Pressed"]
+bg_color = Color(0.38, 0.47, 0.72, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.7, 0.8, 1, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="Focus"]
+draw_center = false
+
+; 글꼴과 크기를 여기에 박는다. ProjectSettings 의 gui/theme/default_font_size
+; 는 실제로는 먹지 않아 (ThemeDB.fallback_font_size 가 16 그대로다) 폰에서
+; 모든 글씨가 16pt 로 나왔다.
+[resource]
+default_font = ExtResource("1")
+default_font_size = 36
+Button/colors/font_color = Color(0.84, 0.87, 0.94, 1)
+Button/colors/font_hover_color = Color(1, 1, 1, 1)
+Button/colors/font_pressed_color = Color(1, 1, 1, 1)
+Button/styles/normal = SubResource("Normal")
+Button/styles/hover = SubResource("Hover")
+Button/styles/pressed = SubResource("Pressed")
+Button/styles/focus = SubResource("Focus")

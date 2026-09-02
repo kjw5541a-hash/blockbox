@@ -13,20 +13,24 @@ func _initialize() -> void:
 	print("test_font: OK")
 	quit()
 
-func _font_path() -> String:
-	return str(ProjectSettings.get_setting("gui/theme/custom_font", ""))
+func _theme() -> Theme:
+	var path := str(ProjectSettings.get_setting("gui/theme/custom", ""))
+	assert(path != "", "gui/theme/custom 이 비어 있으면 웹에서 한글이 깨진다")
+	assert(ResourceLoader.exists(path), "테마 파일이 없다: %s" % path)
+	return load(path) as Theme
+
+func _font() -> Font:
+	return _theme().default_font
 
 func _test_setting_points_at_the_font() -> void:
-	var path := _font_path()
-	assert(path != "", "gui/theme/custom_font 이 비어 있으면 웹에서 한글이 깨진다")
-	assert(ResourceLoader.exists(path), "폰트 파일이 없다: %s" % path)
-	var size: int = ProjectSettings.get_setting("gui/theme/default_font_size", 16)
+	var font := _font()
+	assert(font != null, "테마에 기본 글꼴이 없으면 내장 글꼴로 떨어져 한글이 깨진다")
 	# 720x1280 뷰포트가 폰 화면 폭으로 줄어든다. 기본 16 이면 손바닥에서 못 읽는다.
+	var size := _theme().default_font_size
 	assert(size >= 30, "기본 글자 크기가 폰에서 읽기엔 작다: %d" % size)
 
 func _test_font_covers_every_string_literal() -> void:
-	var font: Font = load(_font_path())
-	assert(font != null, "폰트를 불러올 수 없다: %s" % _font_path())
+	var font := _font()
 	var missing := {}
 	for dir in ["res://scenes", "res://scripts"]:
 		for name in DirAccess.get_files_at(dir):
