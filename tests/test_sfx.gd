@@ -3,6 +3,7 @@ extends SceneTree
 func _initialize() -> void:
 	_test_every_name_makes_a_sound()
 	_test_move_is_a_run_of_ticks()
+	_test_echo_leaves_a_tail()
 	_test_waveforms_are_cached()
 	_test_play_without_a_host_is_quiet()
 	await _test_game_actions_make_their_sound()
@@ -45,6 +46,17 @@ func _loudness(d: PackedByteArray, start: int, count: int) -> float:
 	for i in range(start, start + count):
 		sum += absi(d.decode_s16(i * 2))
 	return sum / count
+
+# 잔향이 없으면 소리가 방 없이 코앞에서 난다. 충격 하나를 넣으면 지연마다
+# 메아리가 돌아와야 한다.
+func _test_echo_leaves_a_tail() -> void:
+	var b := PackedFloat32Array()
+	b.resize(Sfx.RATE)
+	b[0] = 1.0
+	Sfx._echo(b)
+	for d in Sfx.ECHO_DELAYS:
+		var i := int(d * Sfx.RATE)
+		assert(absf(b[i]) > 0.1, "%f 초 지연의 메아리가 없다: %f" % [d, b[i]])
 
 # 파형 하나에 수만 번의 사인 계산이 든다. 매 조작마다 다시 돌리면 조작할 때마다
 # 게임이 멈춘다.
