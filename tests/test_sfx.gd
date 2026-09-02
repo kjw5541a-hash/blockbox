@@ -59,6 +59,12 @@ func _test_lock_pitch_falls() -> void:
 	var early := _crossings(b, 0, w)
 	var late := _crossings(b, int(0.2 * Sfx.RATE), w)
 	assert(early > late * 2, "쿵의 음이 안 떨어진다: 앞 %d 뒤 %d" % [early, late])
+	# 착지가 그 쿵을 실제로 쓰는지도 본다. 종만 남으면 소리가 스며들며 커진다 —
+	# 쿵은 닿는 순간이 제일 커야 한다.
+	var lock := Sfx._lock()
+	var ww := int(0.02 * Sfx.RATE)
+	assert(_loudness(lock, 0, ww) > _loudness(lock, int(0.05 * Sfx.RATE), ww),
+		"착지가 닿지 않고 스며든다")
 
 func _crossings(b: PackedFloat32Array, start: int, count: int) -> int:
 	var n := 0
@@ -77,6 +83,13 @@ func _test_echo_leaves_a_tail() -> void:
 	for d in Sfx.ECHO_DELAYS:
 		var i := int(d * Sfx.RATE)
 		assert(absf(b[i]) > 0.1, "%f 초 지연의 메아리가 없다: %f" % [d, b[i]])
+	# 걸리기도 해야 한다. ui 의 종은 0.15 초에 끝나므로 그 뒤에 남는 소리는
+	# 방에서 온 것뿐이다.
+	var d := Sfx.stream(Sfx.UI).data
+	var tail := 0
+	for i in range(int(0.2 * Sfx.RATE), d.size() / 2):
+		tail = maxi(tail, absi(d.decode_s16(i * 2)))
+	assert(tail > 500, "소리에 잔향이 안 걸렸다: 꼬리 %d" % tail)
 
 # 파형 하나에 수만 번의 사인 계산이 든다. 매 조작마다 다시 돌리면 조작할 때마다
 # 게임이 멈춘다.

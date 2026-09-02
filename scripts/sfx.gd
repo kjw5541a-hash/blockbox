@@ -75,7 +75,7 @@ const PEAK := {
 
 static func stream(name: StringName) -> AudioStreamWAV:
 	if not _bank.has(name):
-		_bank[name] = _bake(_norm(_render(name), PEAK.get(name, 0.5)))
+		_bank[name] = _bake(_norm(_echo(_render(name)), PEAK.get(name, 0.5)))
 	return _bank[name]
 
 static func _norm(buf: PackedFloat32Array, peak: float) -> PackedFloat32Array:
@@ -159,7 +159,8 @@ static func _bell(b: PackedFloat32Array, at: float, freq: float, dur: float,
 			b[start + i] += sin(TAU * f * u) * exp(-u * decay) \
 				* minf(1.0, u / attack) * g
 
-# 울림 — 서로 배수가 아닌 지연 셋을 겹친다. 신비로움은 소리 자체보다 소리가
+# 울림 — 소리마다 따로 걸지 않고 여기서 한 번에 건다. 방은 하나뿐이다.
+# 서로 배수가 아닌 지연 넷을 겹친다. 신비로움은 소리 자체보다 소리가
 # 사라지는 방식에서 온다. 지연이 서로 배수면 메아리가 겹쳐 통 속 소리가 된다.
 const ECHO_DELAYS := [0.037, 0.053, 0.071, 0.089]
 const ECHO_FEEDBACK := 0.42
@@ -217,7 +218,7 @@ static func _rotate() -> PackedFloat32Array:
 	_bell(b, top, ROTATE_RUN[ROTATE_RUN.size() - 1] * ROTATE_SHIMMER, 0.4, 0.5)
 	# 바닥에 낮은 음 하나. 몸이 생겨야 스치는 소리가 가벼워지지 않는다.
 	_bell(b, 0.0, ROTATE_RUN[0] * 0.25, 0.45, 0.3)
-	return _echo(b)
+	return b
 
 # 이동 — 유리알이 또르르 구른다. 매 칸마다 울리므로 거의 들리지 않을 만큼
 # 여리다. 있는지 없는지 모를 정도가 맞다 — 조작을 방해하면 안 된다.
@@ -233,7 +234,7 @@ static func _move() -> PackedFloat32Array:
 	var b := _buf(0.3)
 	for i in MOVE_TICKS:
 		_bell(b, i * MOVE_GAP, MOVE_RUN[i], 0.06, 0.8 - i * 0.15, MOVE_FADE, MOVE_ATTACK)
-	return _echo(b)
+	return b
 
 # 내리기 — 음계를 타고 아래로 떨어진다.
 const DROP_RUN := [A6, G6, E6, C6]
@@ -242,7 +243,7 @@ static func _drop() -> PackedFloat32Array:
 	var b := _buf(0.6)
 	for i in DROP_RUN.size():
 		_bell(b, i * 0.035, DROP_RUN[i], 0.4, 0.75)
-	return _echo(b)
+	return b
 
 # 착지 — 쿵. 낮은 음이 순식간에 내려앉고, 그 아래로 낮은 종이 여운을 남긴다.
 # 쿵만 있으면 팍 하고 끝나 다른 소리들과 따로 논다.
@@ -251,7 +252,7 @@ static func _lock() -> PackedFloat32Array:
 	_thump(b, 0.0, 190.0, 48.0, 0.5, 1.0)
 	_bell(b, 0.0, C3, 0.55, 0.3)
 	_bell(b, 0.0, G3, 0.4, 0.15)
-	return _echo(b)
+	return b
 
 # 층이 지워질 때 — 음계를 타고 끝까지 올라갔다가 맨 위에서 한 번 더 반짝인다.
 # 게임에서 제일 좋은 순간이라 제일 길고 제일 화려하다.
@@ -265,7 +266,7 @@ static func _clear() -> PackedFloat32Array:
 	var top := CLEAR_RUN.size() * CLEAR_GAP
 	_bell(b, top, E6, 0.8, 0.7)
 	_bell(b, top + 0.05, G6, 0.8, 0.5)
-	return _echo(b)
+	return b
 
 # 레벨업 — 세 음이 차례로 들어와 화음으로 남는다.
 const LEVEL_RUN := [C6, E6, G6]
@@ -274,7 +275,7 @@ static func _level() -> PackedFloat32Array:
 	var b := _buf(0.8)
 	for i in LEVEL_RUN.size():
 		_bell(b, i * 0.06, LEVEL_RUN[i], 0.55, 0.8)
-	return _echo(b)
+	return b
 
 # 게임 종료 — 같은 음계를 거꾸로 내려온다. 어둡게가 아니라 멀어지게.
 const OVER_RUN := [A5, G5, E5, D5, C5]
@@ -283,7 +284,7 @@ static func _over() -> PackedFloat32Array:
 	var b := _buf(1.6)
 	for i in OVER_RUN.size():
 		_bell(b, i * 0.16, OVER_RUN[i], 0.85, 0.8 - i * 0.1)
-	return _echo(b)
+	return b
 
 # 시점 돌리기 — 낮은 5도가 툭 떨어진다. 조각이 아니라 통이 돌았다는 것만
 # 알리면 되므로 낮고, 짧고, 작다.
@@ -291,10 +292,10 @@ static func _turn() -> PackedFloat32Array:
 	var b := _buf(0.4)
 	_bell(b, 0.0, G3, 0.22, 0.8, 2.2)
 	_bell(b, 0.05, C3, 0.25, 0.6, 2.0)
-	return _echo(b)
+	return b
 
 # 버튼 — 유리알 하나. 눌린 걸 알려주는 것 말고는 하는 일이 없다.
 static func _ui() -> PackedFloat32Array:
 	var b := _buf(0.3)
 	_bell(b, 0.0, C6, 0.15, 0.8, 2.0)
-	return _echo(b)
+	return b
