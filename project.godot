@@ -8,6 +8,9 @@ config/name="blockbox"
 ; 표시되므로, 폰에서 지금 어떤 빌드를 보고 있는지 바로 알 수 있다.
 config/version="dev"
 run/main_scene="res://scenes/start.tscn"
+; 웹 빌드의 파비콘과 iOS "홈 화면에 추가" 아이콘이 이 파일에서 나온다
+; (Web 프리셋의 html/export_icon).
+config/icon="res://assets/icon.png"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [display]
