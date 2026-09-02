@@ -19,6 +19,11 @@ const YAW_BASE_DEG := 45.0
 # -30 도에서는 두 수평 격자축이 화면에서 ±27 도로만 벌어져 위/옆 구분이 안 된다.
 # -45 도면 ±35 도로 벌어지고, 통 위아래 여백도 늘어 통 바깥 스와이프가 편해진다.
 const PITCH_DEG := -45.0
+# 상하각을 움직일 수 있는 범위. -90 은 바로 위에서 내려다보는 탑뷰다.
+# 아래쪽 한계가 -35 인 이유는 위 주석과 같다 — 더 눕히면 두 수평 격자축이
+# 화면에서 겹쳐, 드래그를 축별로 분해하는 TouchInput._feed_piece 가 무너진다.
+const PITCH_MIN := -90.0
+const PITCH_MAX := -35.0
 const TURN_TIME := 0.25
 
 var yaw_step := 0
@@ -27,9 +32,10 @@ var _tween: Tween = null
 # 목표 각도를 누적해서 따로 들고 있는다. 진행 중인 트윈의 중간값에서 90도를 더하면
 # 빠르게 두 번 돌렸을 때 화면 각도가 yaw_step 과 영구히 어긋난다.
 var _yaw_target := YAW_BASE_DEG
+var _pitch := PITCH_DEG
 
 func _ready() -> void:
-	rotation_degrees = Vector3(PITCH_DEG, _yaw_target, 0.0)
+	rotation_degrees = Vector3(_pitch, _yaw_target, 0.0)
 
 # 현재 목표 각도. 감기지 않은 절대값이라 네 번 돌리면 360 이 된다.
 func yaw_degrees() -> float:
@@ -44,9 +50,20 @@ func turn(dir: int) -> void:
 		_tween.kill()
 	_tween = create_tween()
 	_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	var target := rotation_degrees
-	target.y = _yaw_target
-	_tween.tween_property(self, "rotation_degrees", target, TURN_TIME)
+	# y 성분만 트윈한다. 벡터 전체를 트윈하면 시작할 때 찍어둔 상하각으로
+	# 매 프레임 덮어써서, 도는 중에 기울인 각도가 도로 튕겨 나간다.
+	_tween.tween_property(self, "rotation_degrees:y", _yaw_target, TURN_TIME)
+
+# 현재 상하각. -90 이 탑뷰다.
+func pitch_degrees() -> float:
+	return _pitch
+
+# 상하로 delta 도만큼 기울인다. 좌우 회전과 달리 격자축 대응(AWAY/RIGHT)에
+# 쓰이지 않으므로 90도 단위로 끊지 않고 연속으로 움직인다. 트윈도 걸지 않는다 —
+# 손가락이나 키를 따라 그 자리에서 바뀌어야 따라오는 느낌이 난다.
+func pitch_by(delta: float) -> void:
+	_pitch = clampf(_pitch + delta, PITCH_MIN, PITCH_MAX)
+	rotation_degrees.x = _pitch
 
 func axis_away() -> Vector3i:
 	return AWAY[yaw_step]

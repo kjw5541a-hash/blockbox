@@ -1,5 +1,8 @@
 extends Node3D
 
+# 키 한 번에 움직이는 상하각. 손가락 조작은 다음에 붙인다.
+const PITCH_KEY_STEP := 5.0
+
 @onready var game: Game = $Game
 @onready var rig: CameraRig = $CameraRig
 @onready var board_view := $BoardView
@@ -47,6 +50,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			rig.turn(-1)
 		KEY_E:
 			rig.turn(1)
+		KEY_W:
+			rig.pitch_by(-PITCH_KEY_STEP)
+		KEY_S:
+			rig.pitch_by(PITCH_KEY_STEP)
 		KEY_R:
 			# 게임오버 전에 눌러도 이번 판 점수는 기록에 남긴다.
 			SaveData.submit(game.score)

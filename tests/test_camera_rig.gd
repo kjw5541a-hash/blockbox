@@ -14,6 +14,8 @@ func _initialize() -> void:
 	_test_tilt_axis()
 	_test_mapping_is_pinned_to_axes()
 	_test_visual_yaw_tracks_yaw_step()
+	await _test_pitch_is_continuous_and_clamped()
+	await _test_pitch_survives_a_turn()
 	print("test_camera_rig: OK")
 	quit()
 
@@ -112,3 +114,58 @@ func _test_visual_yaw_tracks_yaw_step() -> void:
 		var got := wrapf(r.yaw_degrees(), 0.0, 360.0)
 		assert(absf(want - got) < 0.001,
 			"yaw_step %d 인데 화면 각도가 %f, 기대 %f" % [r.yaw_step, got, want])
+
+
+# 상하각은 격자축 대응에 쓰이지 않으므로 90도 단위로 끊지 않는다. 대신 양 끝을
+# 막는다. 아래쪽을 열어두면 두 수평 격자축이 화면에서 겹쳐 조각 드래그가 죽는다.
+func _test_pitch_is_continuous_and_clamped() -> void:
+	var r := _rig()
+	await process_frame
+	assert(is_equal_approx(r.pitch_degrees(), CameraRig.PITCH_DEG),
+		"처음에는 기본 각도여야 한다: %f" % r.pitch_degrees())
+	assert(CameraRig.PITCH_MIN <= CameraRig.PITCH_DEG
+		and CameraRig.PITCH_DEG <= CameraRig.PITCH_MAX,
+		"기본 각도가 움직일 수 있는 범위 밖이다")
+
+	r.pitch_by(-7.5)
+	assert(is_equal_approx(r.pitch_degrees(), CameraRig.PITCH_DEG - 7.5),
+		"상하각은 끊지 않고 준 만큼 움직여야 한다: %f" % r.pitch_degrees())
+	assert(is_equal_approx(r.rotation_degrees.x, r.pitch_degrees()),
+		"실제 카메라 각도가 따라오지 않았다: %f" % r.rotation_degrees.x)
+
+	# 탑뷰를 지나쳐 뒤집히면 안 된다.
+	for _i in 100:
+		r.pitch_by(-10.0)
+	assert(is_equal_approx(r.pitch_degrees(), CameraRig.PITCH_MIN),
+		"위쪽 한계에서 멈춰야 한다: %f" % r.pitch_degrees())
+	for _i in 100:
+		r.pitch_by(10.0)
+	assert(is_equal_approx(r.pitch_degrees(), CameraRig.PITCH_MAX),
+		"아래쪽 한계에서 멈춰야 한다: %f" % r.pitch_degrees())
+	assert(is_equal_approx(r.rotation_degrees.x, CameraRig.PITCH_MAX),
+		"한계에서도 실제 카메라 각도가 맞아야 한다: %f" % r.rotation_degrees.x)
+
+	# 상하로 기울여도 어느 격자축이 화면 위인지는 달라지지 않는다.
+	var away := r.axis_away()
+	r.pitch_by(-30.0)
+	assert(r.axis_away() == away, "상하각은 격자축 대응을 건드리면 안 된다")
+	r.queue_free()
+
+# 좌우 회전은 트윈으로 돈다. 그 트윈이 벡터 전체를 건드리면, 도는 중에 기울인
+# 각도가 트윈이 시작할 때 찍어둔 값으로 도로 튕겨 나간다.
+func _test_pitch_survives_a_turn() -> void:
+	var r := _rig()
+	await process_frame
+	r.turn(1)
+	r.pitch_by(-20.0)
+	var want := CameraRig.PITCH_DEG - 20.0
+	# 트윈이 끝날 때까지 돌린다.
+	for _i in 40:
+		await process_frame
+	assert(is_equal_approx(r.pitch_degrees(), want),
+		"도는 중에 기울인 각도가 사라졌다: %f, 기대 %f" % [r.pitch_degrees(), want])
+	assert(is_equal_approx(r.rotation_degrees.x, want),
+		"도는 중에 기울인 실제 카메라 각도가 사라졌다: %f" % r.rotation_degrees.x)
+	assert(is_equal_approx(r.rotation_degrees.y, r.yaw_degrees()),
+		"좌우 회전은 그대로 끝나야 한다: %f" % r.rotation_degrees.y)
+	r.queue_free()
