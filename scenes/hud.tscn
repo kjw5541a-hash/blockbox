@@ -6,21 +6,43 @@
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1")
 
-[node name="Top" type="HBoxContainer" parent="."]
+[node name="Side" type="VBoxContainer" parent="."]
+anchor_left = 1.0
 anchor_right = 1.0
-offset_bottom = 84.0
+offset_left = -172.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = 400.0
+grow_horizontal = 0
+theme_override_constants/separation = 10
 mouse_filter = 2
 
-[node name="Score" type="Label" parent="Top"]
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 30
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="NextSwatch" type="ColorRect" parent="Top"]
-custom_minimum_size = Vector2(56, 56)
-size_flags_vertical = 4
+[node name="Score" type="Label" parent="Side"]
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 2
 mouse_filter = 2
+
+[node name="NextLabel" type="Label" parent="Side"]
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 2
+text = "다음"
+mouse_filter = 2
+
+[node name="NextSwatch" type="ColorRect" parent="Side"]
+custom_minimum_size = Vector2(0, 48)
+mouse_filter = 2
+
+[node name="Pause" type="Button" parent="Side"]
+custom_minimum_size = Vector2(0, 72)
+theme_override_font_sizes/font_size = 22
+focus_mode = 0
+text = "일시정지"
+
+[node name="Quit" type="Button" parent="Side"]
+custom_minimum_size = Vector2(0, 72)
+theme_override_font_sizes/font_size = 22
+focus_mode = 0
+text = "종료"
 
 [node name="Bottom" type="HBoxContainer" parent="."]
 anchor_top = 1.0
@@ -57,16 +79,13 @@ focus_mode = 0
 text = "내리기"
 
 [node name="LayerGauge" type="VBoxContainer" parent="."]
-anchors_preset = 6
-anchor_left = 1.0
+anchors_preset = 4
 anchor_top = 0.5
-anchor_right = 1.0
 anchor_bottom = 0.5
-offset_left = -60.0
+offset_left = 12.0
 offset_top = -180.0
-offset_right = -12.0
+offset_right = 60.0
 offset_bottom = 180.0
-grow_horizontal = 0
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("2")
@@ -77,6 +96,23 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(1, 1, 1, 1)
 mouse_filter = 2
+
+[node name="Paused" type="Label" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -60.0
+offset_right = 200.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_alignment = 1
+vertical_alignment = 1
+mouse_filter = 2
+text = "일시정지"
 
 [node name="GameOver" type="Label" parent="."]
 visible = false

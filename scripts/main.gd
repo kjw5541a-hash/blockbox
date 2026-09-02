@@ -68,5 +68,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			piece_view.refresh()
 			$HUD.restart()
 		KEY_ESCAPE:
-			SaveData.submit(game.score)
-			get_tree().change_scene_to_file("res://scenes/start.tscn")
+			$HUD.quit_to_menu()
+		KEY_P:
+			$HUD.toggle_pause()

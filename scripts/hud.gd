@@ -10,12 +10,15 @@ func setup(g: Game, r: CameraRig) -> void:
 	$Bottom/RotateY.pressed.connect(_rotate.bind(rig.rot_screen_y))
 	$Bottom/RotateZ.pressed.connect(_rotate.bind(rig.rot_screen_z))
 	$Bottom/Drop.pressed.connect(func() -> void: game.hard_drop())
+	$Side/Pause.pressed.connect(toggle_pause)
+	$Side/Quit.pressed.connect(quit_to_menu)
 	game.layers_cleared.connect(_on_cleared)
 	# next_kind 은 _spawn 끝에서야 다음 값으로 넘어간다. piece_locked 에 물리면
 	# 견본이 한 박자 늦어 "지금 내려오는 조각" 색을 보여준다.
 	game.piece_moved.connect(_refresh_next)
 	game.game_over.connect(_on_game_over)
 	$GameOver.visible = false
+	$Paused.visible = false
 	_refresh_score()
 	_refresh_next()
 	$LayerGauge.setup(game)
@@ -32,7 +35,7 @@ func _on_cleared(_ys: PackedInt32Array, _kind: int) -> void:
 # 다음 조각 미리보기. 3D 미니 뷰포트 대신 색 견본 하나로 보여준다.
 # 조각 종류는 색으로 구분되므로 이것으로 충분하다.
 func _refresh_next() -> void:
-	$Top/NextSwatch.color = BlockColors.of(game.next_kind)
+	$Side/NextSwatch.color = BlockColors.of(game.next_kind)
 
 # 회전 축은 화면 기준이다. 어떤 격자축이 되는지는 CameraRig 가 지금 시점을
 # 보고 정한다 — 버튼은 축을 고르는 함수를 들고 있다가 누를 때마다 새로 묻는다.
@@ -41,8 +44,22 @@ func _rotate(pick: Callable) -> void:
 	game.rotate(a[0], a[1])
 
 func _refresh_score() -> void:
-	$Top/Score.text = "점수 %d   레벨 %d   최고 %d" % [
+	# 오른쪽 세로 패널이라 줄을 나눠 쌓는다. 통 위쪽을 비워 두려고 옮긴 자리다.
+	$Side/Score.text = "점수 %d\n레벨 %d\n최고 %d" % [
 		game.score, game.level, SaveData.load_high_score()]
+
+# 일시정지는 낙하뿐 아니라 조작까지 멈춘다 — 멈춘 채로 조각을 옮길 수 있으면
+# 일시정지가 곧 치트다. 멈춤 여부는 Game 이 들고 있다.
+func toggle_pause() -> void:
+	if game.is_over:
+		return
+	game.paused = not game.paused
+	$Paused.visible = game.paused
+	$Side/Pause.text = "계속" if game.paused else "일시정지"
+
+func quit_to_menu() -> void:
+	SaveData.submit(game.score)
+	get_tree().change_scene_to_file("res://scenes/start.tscn")
 
 func _on_game_over() -> void:
 	var best := SaveData.submit(game.score)
@@ -53,6 +70,9 @@ func _on_game_over() -> void:
 # 재시작할 때 이전 판의 점수와 미리보기가 남지 않도록 전부 새로 그린다.
 func restart() -> void:
 	$GameOver.visible = false
+	$Paused.visible = false
+	$Side/Pause.text = "일시정지"
+	$Paused.visible = false
 	_refresh_score()
 	_refresh_next()
 	$LayerGauge.refresh()

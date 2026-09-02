@@ -41,6 +41,9 @@ var board := Board.new()
 var current: Piece = null
 var next_kind := 0
 var is_over := false
+# 일시정지 중에는 시간도 조작도 멈춘다. 낙하만 멈추면 멈춰 둔 채로 조각을
+# 원하는 자리까지 옮겨 놓을 수 있다.
+var paused := false
 var level := 1
 var score := 0
 var total_layers := 0
@@ -54,6 +57,7 @@ var _grounded := false
 func start(rng_seed: int = 0) -> void:
 	board = Board.new()
 	is_over = false
+	paused = false
 	score = 0
 	level = 1
 	total_layers = 0
@@ -102,7 +106,7 @@ func fall_interval() -> float:
 	return maxf(MIN_FALL_INTERVAL, BASE_FALL_INTERVAL * pow(FALL_SPEEDUP, level - 1))
 
 func move(delta: Vector3i) -> bool:
-	if current == null or is_over:
+	if current == null or is_over or paused:
 		return false
 	var moved := current.copy()
 	moved.origin += delta
@@ -129,7 +133,7 @@ func _on_piece_changed() -> void:
 	piece_moved.emit()
 
 func step(delta: float) -> void:
-	if is_over or current == null:
+	if is_over or paused or current == null:
 		return
 	# 쉬움에서는 중력도 잠금 지연도 없다. 내리기(hard_drop)만이 조각을 잠근다.
 	if not GameConfig.gravity():
@@ -154,7 +158,7 @@ func step(delta: float) -> void:
 			_lock_timer = 0.0
 
 func hard_drop() -> void:
-	if current == null or is_over:
+	if current == null or is_over or paused:
 		return
 	while move(Vector3i(0, -1, 0)):
 		pass
@@ -202,7 +206,7 @@ func footprint_cells() -> Array[Vector3i]:
 	return out
 
 func rotate(axis: int, dir: int) -> bool:
-	if current == null or is_over:
+	if current == null or is_over or paused:
 		return false
 	var turned := current.rotated(axis, dir)
 	for k in KICKS:
