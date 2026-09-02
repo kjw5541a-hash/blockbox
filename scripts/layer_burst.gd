@@ -8,6 +8,7 @@ extends Node3D
 const LIFETIME := 0.9
 const PER_CELL := 8
 const SPARK_SIZE := 0.16
+const WHITEN := 0.35
 
 var game: Game = null
 
@@ -15,11 +16,11 @@ func setup(g: Game) -> void:
 	game = g
 	game.layers_cleared.connect(_on_cleared)
 
-func _on_cleared(ys: PackedInt32Array) -> void:
+func _on_cleared(ys: PackedInt32Array, kind: int) -> void:
 	for y in ys:
-		burst(y)
+		burst(y, BlockColors.of(kind))
 
-func burst(y: int) -> void:
+func burst(y: int, color: Color) -> void:
 	var p := CPUParticles3D.new()
 	p.mesh = _spark_mesh()
 	p.amount = Board.LAYER_CELLS * PER_CELL
@@ -35,6 +36,8 @@ func burst(y: int) -> void:
 	p.initial_velocity_min = 1.5
 	p.initial_velocity_max = 4.5
 	p.gravity = Vector3(0.0, -9.8, 0.0)
+	# 방금 놓은 조각 색으로 튄다. 흰색을 조금 섞어야 불티처럼 밝게 뜬다.
+	p.color = color.lerp(Color.WHITE, WHITEN)
 	p.scale_amount_min = 0.4
 	p.scale_amount_max = 1.0
 	# 다 터진 뒤 스스로 사라진다. 안 그러면 판이 길어질수록 노드가 쌓인다.
@@ -53,6 +56,9 @@ static func _spark_mesh() -> BoxMesh:
 		var mat := StandardMaterial3D.new()
 		# 빛을 받지 않아야 어두운 배경에서 또렷하게 튄다.
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.albedo_color = Color(1.0, 0.95, 0.78)
+		# 불티 색은 층마다 다르다. 메시는 하나를 돌려 쓰므로 색은 파티클이
+		# 정점 색으로 실어 보낸다. 선형으로 읽으면 조각 색보다 밝게 튄다.
+		mat.vertex_color_use_as_albedo = true
+		mat.vertex_color_is_srgb = true
 		_mesh.material = mat
 	return _mesh

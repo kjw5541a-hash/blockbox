@@ -6,6 +6,7 @@ func _initialize() -> void:
 	await _test_burst_lands_on_the_cleared_layer()
 	await _test_bursts_clean_themselves_up()
 	await _test_nothing_happens_without_a_clear()
+	_test_sparks_wear_the_piece_color()
 	print("test_layer_burst: OK")
 	quit()
 
@@ -30,7 +31,7 @@ func _test_burst_lands_on_the_cleared_layer() -> void:
 	var game: Game = r[0]
 	var burst = r[1]
 
-	game.layers_cleared.emit(PackedInt32Array([0, 2]))
+	game.layers_cleared.emit(PackedInt32Array([0, 2]), 3)
 	var sparks := _sparks(burst)
 	assert(sparks.size() == 2, "지워진 층마다 하나씩 터져야 한다: %d" % sparks.size())
 
@@ -61,7 +62,7 @@ func _test_bursts_clean_themselves_up() -> void:
 	var game: Game = r[0]
 	var burst = r[1]
 
-	game.layers_cleared.emit(PackedInt32Array([1]))
+	game.layers_cleared.emit(PackedInt32Array([1]), 1)
 	var p := _sparks(burst)[0]
 	assert(p.finished.is_connected(p.queue_free), "다 터진 뒤 스스로 사라져야 한다")
 	p.finished.emit()
@@ -77,13 +78,43 @@ func _test_nothing_happens_without_a_clear() -> void:
 	var game: Game = r[0]
 	var burst = r[1]
 
-	game.layers_cleared.emit(PackedInt32Array())
+	game.layers_cleared.emit(PackedInt32Array(), 1)
 	assert(_sparks(burst).is_empty(), "지워진 층이 없으면 터질 것도 없다")
 
 	# 조각을 잠그기만 해서는 터지지 않는다. 층이 지워질 때만이다.
 	game.hard_drop()
 	await process_frame
 	assert(_sparks(burst).is_empty(), "조각이 잠겼을 뿐인데 터졌다")
+
+	game.queue_free()
+	burst.queue_free()
+
+
+# 불티가 흰색 고정이면 "내가 놓은 조각이 터졌다"가 아니라 그냥 이펙트다.
+# 색은 메시가 아니라 파티클이 들고 있어야 한다 — 메시는 하나를 돌려 쓰므로
+# 거기에 색을 칠하면 모든 층이 같은 색으로 터진다.
+func _test_sparks_wear_the_piece_color() -> void:
+	var r := _rig()
+	var game: Game = r[0]
+	var burst = r[1]
+
+	game.layers_cleared.emit(PackedInt32Array([0]), 3)
+	game.layers_cleared.emit(PackedInt32Array([1]), 5)
+	var sparks := _sparks(burst)
+	assert(sparks.size() == 2, "층마다 하나씩")
+	assert(sparks[0].color != sparks[1].color,
+		"조각 종류가 다른데 불티 색이 같다: %s" % sparks[0].color)
+	for i in 2:
+		var kind: int = [3, 5][i]
+		var want := BlockColors.of(kind).lerp(Color.WHITE, burst.WHITEN)
+		assert(sparks[i].color.is_equal_approx(want),
+			"%d 번 조각 불티 색이 어긋난다: %s, 기대 %s" % [kind, sparks[i].color, want])
+
+	var mat: StandardMaterial3D = sparks[0].mesh.material
+	assert(mat.vertex_color_use_as_albedo,
+		"메시가 정점 색을 안 쓰면 파티클 색은 무시되고 전부 같은 색으로 터진다")
+	assert(mat.vertex_color_is_srgb,
+		"정점 색을 선형으로 읽으면 조각 색보다 밝게 튄다")
 
 	game.queue_free()
 	burst.queue_free()

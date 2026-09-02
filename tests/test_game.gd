@@ -282,7 +282,7 @@ func _test_layer_clear_scores() -> void:
 	g.current = i_piece
 
 	var got := [0]
-	g.layers_cleared.connect(func(ys: PackedInt32Array) -> void: got[0] = ys.size())
+	g.layers_cleared.connect(func(ys: PackedInt32Array, _kind: int) -> void: got[0] = ys.size())
 	var score_before := g.score
 	g.hard_drop()
 	assert(got[0] == 1, "빈 줄을 메우면 층이 지워져야 한다, 실제 %d" % got[0])
@@ -308,10 +308,15 @@ func _test_multi_layer_bonus() -> void:
 	assert(g.board.is_valid(o_piece.world_cells()), "세운 O 조각이 놓일 자리가 있어야 한다")
 	g.current = o_piece
 
-	var got := [0]
-	g.layers_cleared.connect(func(ys: PackedInt32Array) -> void: got[0] = ys.size())
+	var got := [0, 0]
+	g.layers_cleared.connect(func(ys: PackedInt32Array, kind: int) -> void:
+		got[0] = ys.size()
+		got[1] = kind)
 	g.hard_drop()
 	assert(got[0] == 2, "두 층이 한 번에 지워져야 한다, 실제 %d" % got[0])
+	# 불티 색이 여기서 나온다. 아무 값이나 실어 보내면 색이 조각과 어긋난다.
+	assert(got[1] == o_piece.kind,
+		"층을 채운 조각 종류를 같이 보내야 한다: %d, 기대 %d" % [got[1], o_piece.kind])
 	assert(g.total_layers == 2, "누적 층 수가 2여야 한다, 실제 %d" % g.total_layers)
 	# 동시 클리어 보너스: 두 층은 한 층의 두 배가 아니라 세 배다.
 	assert(g.score == Game.SCORE_PER_LAYER * 1 * Game.CLEAR_MULTIPLIER[2],

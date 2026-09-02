@@ -17,6 +17,9 @@ func _ready() -> void:
 	piece_view.setup(game)
 	$LayerBurst.setup(game)
 	touch_input.setup(game, rig)
+	# 층이 지워지면 통이 흔들린다. 흔드는 건 카메라 몫이라 여기서 잇는다.
+	game.layers_cleared.connect(
+		func(_ys: PackedInt32Array, _kind: int) -> void: rig.shake())
 	game.start()
 	$HUD.setup(game, rig)
 

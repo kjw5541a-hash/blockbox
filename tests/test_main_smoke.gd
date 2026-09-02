@@ -108,6 +108,18 @@ func _initialize() -> void:
 		assert(game.current.cells == turned,
 			"%s 버튼이 화면 축 %s 이 아닌 다른 축으로 돌린다" % [button_name, axis])
 
+	# 층이 지워지면 화면이 한 번 번쩍하고 곧 가라앉는다.
+	var flash: ColorRect = hud.get_node("Flash")
+	assert(flash.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+		"번쩍임이 화면 전체를 덮으므로 입력을 삼키면 버튼이 죽는다")
+	assert(is_equal_approx(flash.modulate.a, 0.0), "평소에는 보이지 않아야 한다")
+	game.layers_cleared.emit(PackedInt32Array([0]), 1)
+	assert(flash.modulate.a > 0.1, "층이 지워졌는데 번쩍이지 않았다: %f" % flash.modulate.a)
+	for _i in 60:
+		await process_frame
+	assert(is_equal_approx(flash.modulate.a, 0.0),
+		"번쩍임이 가라앉지 않으면 화면이 하얗게 남는다: %f" % flash.modulate.a)
+
 	var gauge := hud.get_node("LayerGauge")
 	var gauge_bar: ColorRect = gauge._bars[Board.HEIGHT - 1]
 	gauge_bar.size.x = 48.0

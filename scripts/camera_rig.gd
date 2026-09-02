@@ -25,6 +25,9 @@ const PITCH_DEG := -45.0
 const PITCH_MIN := -90.0
 const PITCH_MAX := -35.0
 const TURN_TIME := 0.25
+# 층이 지워질 때의 짧은 흔들림.
+const SHAKE_TIME := 0.24
+const SHAKE_DIST := 0.14
 
 var yaw_step := 0
 
@@ -33,9 +36,35 @@ var _tween: Tween = null
 # 빠르게 두 번 돌렸을 때 화면 각도가 yaw_step 과 영구히 어긋난다.
 var _yaw_target := YAW_BASE_DEG
 var _pitch := PITCH_DEG
+var _shake_tween: Tween = null
+var _cam_home := Vector3.ZERO
 
 func _ready() -> void:
 	rotation_degrees = Vector3(_pitch, _yaw_target, 0.0)
+	var cam := _camera()
+	if cam != null:
+		_cam_home = cam.position
+
+func _camera() -> Camera3D:
+	return get_node_or_null("Camera3D") as Camera3D
+
+# 층이 지워질 때 통을 짧게 흔든다. 리그가 아니라 그 아래 카메라만 흔든다 —
+# 리그 위치는 통 한가운데를 가리키는 기준점이라 건드리면 시점이 어긋난다.
+func shake() -> void:
+	var cam := _camera()
+	if cam == null or not is_inside_tree():
+		return
+	if _shake_tween != null and _shake_tween.is_valid():
+		_shake_tween.kill()
+	cam.position = _cam_home
+	_shake_tween = create_tween()
+	var step := SHAKE_TIME / 4.0
+	for i in 3:
+		# 갈수록 잦아든다. 끝까지 같은 폭이면 흔들림이 안 끝난 것처럼 보인다.
+		var fade := 1.0 - float(i) / 3.0
+		var off := Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), 0.0).normalized()
+		_shake_tween.tween_property(cam, "position", _cam_home + off * SHAKE_DIST * fade, step)
+	_shake_tween.tween_property(cam, "position", _cam_home, step)
 
 # 현재 목표 각도. 감기지 않은 절대값이라 네 번 돌리면 360 이 된다.
 func yaw_degrees() -> float:

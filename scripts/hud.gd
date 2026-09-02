@@ -10,7 +10,7 @@ func setup(g: Game, r: CameraRig) -> void:
 	$Bottom/RotateY.pressed.connect(_rotate.bind(rig.rot_screen_y))
 	$Bottom/RotateZ.pressed.connect(_rotate.bind(rig.rot_screen_z))
 	$Bottom/Drop.pressed.connect(func() -> void: game.hard_drop())
-	game.layers_cleared.connect(func(_ys: PackedInt32Array) -> void: _refresh_score())
+	game.layers_cleared.connect(_on_cleared)
 	# next_kind 은 _spawn 끝에서야 다음 값으로 넘어간다. piece_locked 에 물리면
 	# 견본이 한 박자 늦어 "지금 내려오는 조각" 색을 보여준다.
 	game.piece_moved.connect(_refresh_next)
@@ -19,6 +19,15 @@ func setup(g: Game, r: CameraRig) -> void:
 	_refresh_score()
 	_refresh_next()
 	$LayerGauge.setup(game)
+
+const FLASH_ALPHA := 0.32
+const FLASH_TIME := 0.35
+
+func _on_cleared(_ys: PackedInt32Array, _kind: int) -> void:
+	_refresh_score()
+	# 화면이 한 번 번쩍한다. 불티만으로는 층이 사라진 순간을 놓치기 쉽다.
+	$Flash.modulate.a = FLASH_ALPHA
+	create_tween().tween_property($Flash, "modulate:a", 0.0, FLASH_TIME)
 
 # 다음 조각 미리보기. 3D 미니 뷰포트 대신 색 견본 하나로 보여준다.
 # 조각 종류는 색으로 구분되므로 이것으로 충분하다.

@@ -17,6 +17,7 @@ func _initialize() -> void:
 	await _test_pitch_is_continuous_and_clamped()
 	await _test_pitch_survives_a_turn()
 	await _test_screen_rotation_axes_follow_the_view()
+	await _test_shake_returns_home()
 	print("test_camera_rig: OK")
 	quit()
 
@@ -227,3 +228,30 @@ func _best_alignment(basis: Basis) -> float:
 					continue
 				best = maxf(best, _alignment([a, b, c], basis))
 	return best
+
+
+# 층이 지워질 때의 흔들림. 카메라가 제자리로 돌아오지 않으면 판이 진행될수록
+# 시점이 조금씩 밀린다. 리그 자체를 흔들어도 같은 일이 난다.
+func _test_shake_returns_home() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	var r: CameraRig = main.rig
+	var cam: Camera3D = r.get_node("Camera3D")
+	var home := cam.position
+	var rig_home := r.position
+
+	r.shake()
+	var moved := false
+	for _i in 8:
+		await process_frame
+		if not cam.position.is_equal_approx(home):
+			moved = true
+	assert(moved, "흔들었는데 카메라가 움직이지 않았다")
+	assert(r.position.is_equal_approx(rig_home), "리그가 아니라 카메라만 흔들어야 한다")
+
+	for _i in 60:
+		await process_frame
+	assert(cam.position.is_equal_approx(home),
+		"흔들림이 끝나면 제자리로 돌아와야 한다: %s, 기대 %s" % [cam.position, home])
+	main.queue_free()
