@@ -83,4 +83,9 @@ func _test_game_buttons_keep_their_size() -> void:
 		var got: float = (b as Button).get_combined_minimum_size().y
 		assert(got <= 116.0,
 			"버튼 %s 가 글자 크기 때문에 커졌다: %f" % [b.name, got])
+		# 높이는 custom_minimum_size 가 잡고 있어 글자가 좀 커져도 안 밀린다.
+		# 통을 좁아 보이게 하는 건 글자 크기 자체라 그것도 같이 못박는다.
+		var font_size: int = (b as Button).get_theme_font_size("font_size")
+		assert(font_size <= 24,
+			"게임 화면 버튼 글자가 커졌다: %s %d" % [b.name, font_size])
 	hud.queue_free()
