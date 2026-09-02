@@ -115,13 +115,16 @@ jobs:
           <link rel="apple-touch-icon" href="apple-touch-icon.png">
           <title>blockbox</title>
           <style>
-          html, body { margin: 0; height: 100%; background: #0d0f17; color: #8a8fa3;
-            font: 16px -apple-system, sans-serif; overflow: hidden;
-            display: flex; align-items: center; justify-content: center; }
+          /* iframe 이 화면을 꽉 채우려면 html 과 body 가 둘 다 크기를 가져야 한다.
+             둘 중 하나라도 내용에 맞춰 줄어들면 iframe 의 100% 가 잴 것을 잃고
+             기본 크기(300x150)로 주저앉아 게임이 화면 한구석에만 그려진다. */
+          html, body { margin: 0; width: 100%; height: 100%; overflow: hidden;
+            background: #0d0f17; }
           iframe { border: 0; width: 100%; height: 100%; display: block; }
+          #msg { color: #8a8fa3; font: 16px -apple-system, sans-serif; padding: 24px; }
           </style>
           </head>
-          <body><span id="msg">불러오는 중…</span>
+          <body><div id="msg">불러오는 중…</div>
           <script>
           fetch("version.txt?t=" + Date.now(), { cache: "no-store" })
             .then(function (r) { return r.text(); })
