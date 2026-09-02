@@ -50,36 +50,37 @@ func _initialize() -> void:
 			key_moved = true
 	assert(key_moved, "방향키 넷 중 최소 하나는 조각을 옮겨야 한다")
 
-	# 조각 뷰의 큐브가 격자 좌표와 같은 자리에 있어야 한다.
+	# 조각 뷰의 껍데기가 격자 좌표와 같은 자리에 있어야 한다.
 	var piece_view: Node3D = main.piece_view
 	var world := game.current.world_cells()
-	for i in world.size():
-		var cube: MeshInstance3D = piece_view.get_child(i)
-		assert(cube.visible, "조각 큐브가 보여야 한다")
-		assert(cube.position == Vector3(world[i]),
-			"큐브 위치 %s 가 격자 좌표 %s 와 어긋난다" % [cube.position, world[i]])
+	var solid: MeshInstance3D = piece_view._solid
+	assert(solid.visible, "떨어지는 조각이 보여야 한다")
+	var solid_aabb := (solid.mesh as ArrayMesh).get_aabb()
+	assert(solid_aabb.position.is_equal_approx(
+			Vector3(Piece.bbox_min(world)) - Vector3.ONE * 0.5),
+		"조각 껍데기 %s 가 격자 좌표와 어긋난다" % solid_aabb.position)
 
 	# 잠긴 조각이 보드 뷰에 반영되어야 한다.
-	var board_view: MultiMeshInstance3D = main.board_view
+	var board_view: MeshInstance3D = main.board_view
 	var locked_kind: int = game.current.kind
-	var falling_mat := (piece_view.get_child(0) as MeshInstance3D).material_override as StandardMaterial3D
+	var falling_mat := solid.material_override as StandardMaterial3D
 	var falling_albedo := falling_mat.albedo_color
+	var landing := game.ghost_cells()
 	game.hard_drop()
-	assert(board_view.multimesh.visible_instance_count == 4,
-		"잠긴 4칸이 보드 뷰에 나와야 한다: %d" % board_view.multimesh.visible_instance_count)
+	var stack := (board_view.mesh as ArrayMesh).get_aabb()
+	assert(stack.position.is_equal_approx(
+			Vector3(Piece.bbox_min(landing)) - Vector3.ONE * 0.5),
+		"잠긴 칸이 보드 뷰에 나오지 않았다: %s, 착지 %s" % [stack, landing])
 
 	# 조각이 잠기는 순간 색이 튀면 안 된다. 떨어지는 조각은 albedo_color 로,
-	# 잠긴 칸은 MultiMesh 인스턴스 색(정점 색)으로 그려진다. 두 경로가 같은 값을
+	# 잠긴 칸은 정점 색으로 그려진다. 두 경로가 같은 값을
 	# 넣는 것만으로는 부족하다 — albedo_color 는 sRGB 로 해석되므로 정점 색도
 	# 같게 읽어야 한다. 아니면 잠기는 순간 같은 색이 밝은 쪽으로 튄다.
-	#
-	# 인스턴스 색을 되읽어 비교하지는 못한다. headless 렌더 서버는
-	# get_instance_color 로 항상 검정을 준다 — 값이 아니라 배선만 확인한다.
 	var want := BlockColors.of(locked_kind)
 	assert(Vector3(falling_albedo.r, falling_albedo.g, falling_albedo.b).is_equal_approx(
 		Vector3(want.r, want.g, want.b)),
 		"떨어지는 %d 번 조각 색이 색표와 다르다: %s" % [locked_kind, falling_albedo])
-	var board_mat := board_view.multimesh.mesh.material as StandardMaterial3D
+	var board_mat := board_view.material_override as StandardMaterial3D
 	assert(board_mat.vertex_color_is_srgb,
 		"정점 색을 선형으로 읽으면 albedo_color 쪽보다 밝게 나와 잠길 때 색이 튄다")
 

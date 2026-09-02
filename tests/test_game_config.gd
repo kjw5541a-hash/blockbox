@@ -104,9 +104,7 @@ func _test_main_scene_uses_chosen_size() -> void:
 		"보드가 6x6 이어야 한다: %d 칸" % game.board.cells.size())
 	assert(main.rig.position == Vector3(2.5, (Board.HEIGHT - 1) * 0.5, 2.5),
 		"카메라가 통 한가운데를 봐야 한다: %s" % main.rig.position)
-	var board_view: MultiMeshInstance3D = main.board_view
-	assert(board_view.multimesh.instance_count == 6 * 6 * Board.HEIGHT,
-		"보드 뷰가 모든 칸을 그릴 수 있어야 한다: %d" % board_view.multimesh.instance_count)
+	var board_view: MeshInstance3D = main.board_view
 
 	# 통이 커져도 화면 안에 들어와야 하고, 좌우에 시점 회전용 여백이 남아야 한다.
 	var rect: Rect2 = main.touch_input.box_screen_rect()
@@ -118,8 +116,8 @@ func _test_main_scene_uses_chosen_size() -> void:
 
 	# 쉬움이라 저절로 내려오지 않는다. 내리기로 잠근 뒤 뷰에 반영되는지 본다.
 	game.hard_drop()
-	assert(board_view.multimesh.visible_instance_count == 4,
-		"잠긴 4칸이 보드 뷰에 나와야 한다: %d" % board_view.multimesh.visible_instance_count)
+	assert(board_view.mesh != null and board_view.mesh.get_surface_count() == 1,
+		"6x6 통에서도 잠긴 칸이 보드 뷰에 나와야 한다")
 	var gauge := main.get_node("HUD/LayerGauge")
 	assert(gauge._bars.size() == Board.HEIGHT, "층 게이지 막대는 층마다 하나")
 

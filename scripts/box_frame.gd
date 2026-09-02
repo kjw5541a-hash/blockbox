@@ -1,7 +1,7 @@
 extends Node3D
 
 const LINE_COLOR := Color(1, 1, 1, 0.25)
-const FLOOR_COLOR := Color(1, 1, 1, 0.10)
+const FLOOR_COLOR := Color(1, 1, 1, 0.22)
 
 func _ready() -> void:
 	var mesh := ImmediateMesh.new()
