@@ -15,6 +15,7 @@ func _ready() -> void:
 		(Board.WIDTH - 1) * 0.5, (Board.HEIGHT - 1) * 0.5, (Board.DEPTH - 1) * 0.5)
 	board_view.setup(game)
 	piece_view.setup(game)
+	$LayerBurst.setup(game)
 	touch_input.setup(game, rig)
 	game.start()
 	$HUD.setup(game, rig)

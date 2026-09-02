@@ -282,7 +282,7 @@ func _test_layer_clear_scores() -> void:
 	g.current = i_piece
 
 	var got := [0]
-	g.layers_cleared.connect(func(k: int) -> void: got[0] = k)
+	g.layers_cleared.connect(func(ys: PackedInt32Array) -> void: got[0] = ys.size())
 	var score_before := g.score
 	g.hard_drop()
 	assert(got[0] == 1, "빈 줄을 메우면 층이 지워져야 한다, 실제 %d" % got[0])
@@ -309,7 +309,7 @@ func _test_multi_layer_bonus() -> void:
 	g.current = o_piece
 
 	var got := [0]
-	g.layers_cleared.connect(func(k: int) -> void: got[0] = k)
+	g.layers_cleared.connect(func(ys: PackedInt32Array) -> void: got[0] = ys.size())
 	g.hard_drop()
 	assert(got[0] == 2, "두 층이 한 번에 지워져야 한다, 실제 %d" % got[0])
 	assert(g.total_layers == 2, "누적 층 수가 2여야 한다, 실제 %d" % g.total_layers)

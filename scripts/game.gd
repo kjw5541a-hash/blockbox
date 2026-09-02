@@ -3,7 +3,8 @@ extends Node
 
 signal piece_moved
 signal piece_locked
-signal layers_cleared(count: int)
+# 지워진 층 번호. 개수만 필요하면 size() 를 쓴다.
+signal layers_cleared(ys: PackedInt32Array)
 signal game_over
 
 const BASE_FALL_INTERVAL := 1.0
@@ -176,12 +177,13 @@ func _lock_current() -> void:
 	board.lock(current.world_cells(), current.kind)
 	current = null
 	piece_locked.emit()
-	var n := board.clear_layers()
+	var ys := board.clear_layers()
+	var n := ys.size()
 	if n > 0:
 		total_layers += n
 		score += SCORE_PER_LAYER * level * CLEAR_MULTIPLIER[mini(n, 4)]
 		level = total_layers / LEVEL_UP_LAYERS + 1
-		layers_cleared.emit(n)
+		layers_cleared.emit(ys)
 	_spawn()
 
 func footprint_cells() -> Array[Vector3i]:

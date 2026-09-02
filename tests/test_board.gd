@@ -68,7 +68,9 @@ func _test_clear_single_layer() -> void:
 	_fill_layer(b, 0, 1)
 	b.cells[Board.index(2, 1, 2)] = 9  # 1층에 표식 하나
 	var cleared := b.clear_layers()
-	assert(cleared == 1, "한 층이 지워져야 한다, 실제 %d" % cleared)
+	assert(cleared.size() == 1, "한 층이 지워져야 한다, 실제 %d" % cleared.size())
+	# 번호까지 맞아야 한다. 지워진 자리에 무언가를 띄우려면 이 값을 쓴다.
+	assert(cleared[0] == 0, "지워진 층 번호가 어긋난다: %d" % cleared[0])
 	assert(b.layer_fill_count(1) == 0, "1층은 비어야 한다")
 	assert(b.get_cell(Vector3i(2, 0, 2)) == 9, "위층 표식이 정확히 한 칸 내려와야 한다")
 	assert(b.cells.size() == 224, "클리어 후에도 크기가 유지되어야 한다")
@@ -80,7 +82,10 @@ func _test_clear_two_layers() -> void:
 	b.cells[Board.index(1, 1, 1)] = 8   # 지워지는 두 층 사이
 	b.cells[Board.index(3, 3, 3)] = 9   # 지워지는 층들 위
 	var cleared := b.clear_layers()
-	assert(cleared == 2, "두 층이 지워져야 한다, 실제 %d" % cleared)
+	assert(cleared.size() == 2, "두 층이 지워져야 한다, 실제 %d" % cleared.size())
+	# 무너져 내리기 전 자리를 낮은 층부터 돌려준다.
+	assert(cleared[0] == 0 and cleared[1] == 2,
+		"지워진 층 번호가 어긋난다: %s" % str(cleared))
 	assert(b.get_cell(Vector3i(1, 0, 1)) == 8, "사이 층 표식이 0층으로 내려와야 한다")
 	assert(b.get_cell(Vector3i(3, 1, 3)) == 9, "위쪽 표식이 두 칸 내려와야 한다")
 	assert(b.layer_fill_count(2) == 0, "비워진 자리는 빈 층이어야 한다")
