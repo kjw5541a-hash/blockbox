@@ -7,6 +7,8 @@ func _initialize() -> void:
 	await _test_piece_follows_finger()
 	await _test_view_turns_only_outside_the_box()
 	await _test_end_drag_resets_accumulator()
+	await _test_view_tilts_up_and_down()
+	await _test_one_drag_does_one_thing()
 	print("test_touch_input: OK")
 	quit()
 
@@ -138,4 +140,76 @@ func _test_end_drag_resets_accumulator() -> void:
 	# 같은 드래그를 한 번 더 이으면 이번엔 넘어가야 한다 — 위 단언이 빈 단언이 아님을 확인.
 	input.feed_drag(almost)
 	assert(game.current.origin != before, "이어서 끌면 누적되어 움직여야 한다")
+	main.queue_free()
+
+
+# 상하각까지 손가락으로 움직여야 폰에서 탑뷰를 볼 수 있다. 키보드(W/S)는
+# 개발용이라 폰에는 없다.
+func _test_view_tilts_up_and_down() -> void:
+	var main: Node = await _main()
+	var rig: CameraRig = main.rig
+	var input: TouchInput = main.touch_input
+	var rect := input.box_screen_rect()
+	var outside := Vector2(rect.position.x * 0.5, rect.get_center().y)
+	var before := rig.pitch_degrees()
+
+	input.begin_drag(rect.get_center())
+	input.feed_drag(Vector2(0, 100.0))
+	assert(is_equal_approx(rig.pitch_degrees(), before),
+		"통 안에서 끌면 상하각이 변하면 안 된다: %f" % rig.pitch_degrees())
+
+	# 손가락을 내리면 위에서 내려다보는 쪽으로 간다.
+	input.begin_drag(outside)
+	input.feed_drag(Vector2(0, 40.0))
+	var down := rig.pitch_degrees()
+	assert(down < before - 1.0,
+		"아래로 끌면 탑뷰 쪽으로 가야 한다: %f, 시작 %f" % [down, before])
+	assert(is_equal_approx(down, before - 40.0 * TouchInput.PITCH_DEG_PER_PIXEL),
+		"상하각이 끈 거리에 비례해야 한다: %f" % down)
+	assert(is_equal_approx(rig.rotation_degrees.x, down),
+		"실제 카메라 각도가 따라오지 않았다: %f" % rig.rotation_degrees.x)
+
+	input.begin_drag(outside)
+	input.feed_drag(Vector2(0, -40.0))
+	assert(is_equal_approx(rig.pitch_degrees(), before),
+		"위로 끌면 되돌아와야 한다: %f" % rig.pitch_degrees())
+
+	# 세로로 끌었다고 시점이 좌우로 돌면 안 된다.
+	var step := rig.yaw_step
+	input.begin_drag(outside)
+	input.feed_drag(Vector2(0, 400.0))
+	assert(rig.yaw_step == step, "세로 드래그가 좌우 회전을 건드렸다")
+	assert(is_equal_approx(rig.pitch_degrees(), CameraRig.PITCH_MIN),
+		"끝까지 끌면 탑뷰에서 멈춰야 한다: %f" % rig.pitch_degrees())
+	main.queue_free()
+
+
+# 좌우로 끌 때 손가락이 위아래로 흔들리는 건 정상이다. 그때마다 통이 누우면
+# 시점을 돌릴 때마다 각도가 조금씩 밀려 되돌릴 방법이 없다.
+func _test_one_drag_does_one_thing() -> void:
+	var main: Node = await _main()
+	var rig: CameraRig = main.rig
+	var input: TouchInput = main.touch_input
+	var rect := input.box_screen_rect()
+	var outside := Vector2(rect.position.x * 0.5, rect.get_center().y)
+	var pitch := rig.pitch_degrees()
+	var step := rig.yaw_step
+
+	# 가로로 크게, 세로로 조금씩 흔들며 끈다.
+	input.begin_drag(outside)
+	for i in 12:
+		input.feed_drag(Vector2(10.0, 6.0 if i % 2 == 0 else -6.0))
+	assert(rig.yaw_step == wrapi(step + 1, 0, 4),
+		"가로로 %f 픽셀을 끌었으면 시점이 돌아야 한다" % TouchInput.TURN_PIXELS)
+	assert(is_equal_approx(rig.pitch_degrees(), pitch),
+		"좌우로 끄는 중의 세로 흔들림이 통을 눕혔다: %f" % rig.pitch_degrees())
+
+	# 반대도 마찬가지 - 세로로 끄는 중의 가로 흔들림이 시점을 돌리면 안 된다.
+	step = rig.yaw_step
+	input.begin_drag(outside)
+	for i in 12:
+		input.feed_drag(Vector2(6.0 if i % 2 == 0 else -6.0, -10.0))
+	assert(rig.yaw_step == step, "상하로 끄는 중의 가로 흔들림이 시점을 돌렸다")
+	assert(rig.pitch_degrees() > pitch + 1.0,
+		"세로로 끌었는데 통이 안 누웠다: %f" % rig.pitch_degrees())
 	main.queue_free()

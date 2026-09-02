@@ -3,6 +3,18 @@ extends Node
 
 # 통 바깥을 이만큼 가로로 끌면 시점이 한 칸 돈다.
 const TURN_PIXELS := 90.0
+# 통 바깥 세로 드래그 1픽셀당 상하각. 좌우는 90도 단위로 끊지만 상하는 손가락을
+# 그대로 따라간다. 손가락을 내리면 통의 앞면이 눕고 윗면이 올라온다 — 지도 앱의
+# 기울이기와 같은 방향이다. 전체 범위(55도)가 220픽셀이면 한 번에 끌 만하다.
+const PITCH_DEG_PER_PIXEL := 0.25
+
+# 한 번의 드래그는 좌우 회전 아니면 상하 기울이기 중 하나만 한다. 둘 다 받으면
+# 시점을 돌릴 때마다 손가락이 흔들린 만큼 통이 조금씩 눕고, 그게 쌓인다.
+# 처음 이만큼 움직인 방향으로 정한다.
+const VIEW_LOCK_PIXELS := 12.0
+const VIEW_UNDECIDED := 0
+const VIEW_TURN := 1
+const VIEW_TILT := 2
 
 const MODE_NONE := 0
 const MODE_PIECE := 1
@@ -17,6 +29,8 @@ var _mode := MODE_NONE
 var _away := 0.0
 var _right := 0.0
 var _turn := 0.0
+var _tilt := 0.0
+var _view_axis := VIEW_UNDECIDED
 
 func setup(g: Game, r: CameraRig) -> void:
 	game = g
@@ -48,6 +62,8 @@ func _reset() -> void:
 	_away = 0.0
 	_right = 0.0
 	_turn = 0.0
+	_tilt = 0.0
+	_view_axis = VIEW_UNDECIDED
 
 # 통의 여덟 꼭짓점을 화면에 투영해 감싸는 사각형. 실루엣보다 네 귀퉁이가 조금
 # 넓지만, 시점 회전은 통 좌우의 넓은 여백에서 하므로 실사용에 지장이 없다.
@@ -79,10 +95,21 @@ func _feed_view(relative: Vector2) -> void:
 	if rig == null:
 		return
 	_turn += relative.x
-	while absf(_turn) >= TURN_PIXELS:
-		var dir := 1 if _turn > 0.0 else -1
-		_turn -= TURN_PIXELS * dir
-		rig.turn(dir)
+	_tilt += relative.y
+	if _view_axis == VIEW_UNDECIDED:
+		if maxf(absf(_turn), absf(_tilt)) < VIEW_LOCK_PIXELS:
+			return
+		_view_axis = VIEW_TURN if absf(_turn) > absf(_tilt) else VIEW_TILT
+	if _view_axis == VIEW_TURN:
+		while absf(_turn) >= TURN_PIXELS:
+			var dir := 1 if _turn > 0.0 else -1
+			_turn -= TURN_PIXELS * dir
+			rig.turn(dir)
+		return
+	# 방향이 정해지기 전에 쌓인 몫까지 한 번에 쓴다. 안 그러면 손가락을 뗄 때마다
+	# 문턱만큼씩 조용히 사라져 짧게 여러 번 끌면 잘 안 눕는다.
+	rig.pitch_by(-_tilt * PITCH_DEG_PER_PIXEL)
+	_tilt = 0.0
 
 func _feed_piece(relative: Vector2) -> void:
 	if game == null or rig == null or _camera == null or game.current == null:
