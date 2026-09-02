@@ -9,6 +9,7 @@ func _initialize() -> void:
 	_test_faces_wind_outward()
 	await _test_ghost_is_one_mesh_that_follows_the_piece()
 	await _test_piece_is_one_mesh_too()
+	await _test_hell_hides_the_landing_spot()
 	print("test_piece_view: OK")
 	quit()
 
@@ -171,6 +172,31 @@ func _test_piece_is_one_mesh_too() -> void:
 		"조각 껍데기가 칸을 다 감싸지 못한다: %s" % aabb.size)
 	assert(solid.position.is_equal_approx(Vector3.ZERO),
 		"껍데기는 격자 좌표 그대로 만든다 — 노드를 또 옮기면 어긋난다")
+
+	game.queue_free()
+	view.queue_free()
+
+# 헬 난이도는 착지 자리를 감춘다. 조각은 그대로 보이되 고스트도 윗면 판도
+# 나오면 안 된다 — 하나라도 남으면 어디에 놓일지 그대로 보인다.
+func _test_hell_hides_the_landing_spot() -> void:
+	GameConfig.difficulty = GameConfig.HELL
+	var game := Game.new()
+	root.add_child(game)
+	game.start(7)
+	var view = _script().new()
+	root.add_child(view)
+	await process_frame
+	view.setup(game)
+
+	assert(view._solid.visible, "헬이라도 떨어지는 조각은 보여야 한다")
+	assert(not view._ghost.visible, "헬에서는 고스트가 보이면 안 된다")
+	for m in view._marks:
+		assert(not m.visible, "헬에서는 윗면 판이 보이면 안 된다")
+
+	# 다른 난이도로 돌아가면 다시 나와야 한다.
+	GameConfig.difficulty = GameConfig.HARD
+	view.refresh()
+	assert(view._ghost.visible, "헬이 아니면 고스트가 다시 나와야 한다")
 
 	game.queue_free()
 	view.queue_free()
