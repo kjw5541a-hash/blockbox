@@ -2,7 +2,7 @@ extends SceneTree
 
 func _initialize() -> void:
 	_test_every_name_makes_a_sound()
-	_test_move_is_a_ratchet()
+	_test_move_is_a_run_of_ticks()
 	_test_waveforms_are_cached()
 	_test_play_without_a_host_is_quiet()
 	await _test_game_actions_make_their_sound()
@@ -27,17 +27,18 @@ func _test_every_name_makes_a_sound() -> void:
 		assert(peak > 3000, "%s 가 거의 무음이다: 최대 %d" % [name, peak])
 		assert(peak < 32000, "%s 가 포화됐다: 최대 %d" % [name, peak])
 
-# 이동 소리는 그냥 소음이 아니라 딸깍이 촘촘히 이어진 것이어야 "드르르르륵" 으로
-# 들린다. 딸깍 하나하나는 앞이 크고 뒤로 잦아든다.
-func _test_move_is_a_ratchet() -> void:
+# 이동 소리는 한 덩어리가 아니라 또르르 굴러가는 여러 알이어야 한다.
+# 알마다 새로 시작하므로, 시작 순간이 바로 앞보다 커진다.
+func _test_move_is_a_run_of_ticks() -> void:
 	var d := Sfx.stream(Sfx.MOVE).data
-	var n := d.size() / 2
-	var span := n / Sfx.MOVE_CLICKS
-	for c in Sfx.MOVE_CLICKS:
-		var head := _loudness(d, c * span, span / 4)
-		var tail := _loudness(d, c * span + span * 3 / 4, span / 4)
-		assert(head > tail * 1.5,
-			"%d 번째 딸깍이 앞뒤로 평평하다: 앞 %f 뒤 %f" % [c, head, tail])
+	var w := int(0.004 * Sfx.RATE)
+	for k in Sfx.MOVE_TICKS:
+		var at := int(k * Sfx.MOVE_GAP * Sfx.RATE)
+		# 첫 알 앞은 무음이다. 창을 뒤로 뺄 자리가 없다.
+		var before := 0.0 if at < w else _loudness(d, at - w, w)
+		var after := _loudness(d, at, w)
+		assert(after > before * 1.3,
+			"%d 번째 알이 앞과 이어져 있다: 앞 %f 뒤 %f" % [k, before, after])
 
 func _loudness(d: PackedByteArray, start: int, count: int) -> float:
 	var sum := 0.0
@@ -45,8 +46,8 @@ func _loudness(d: PackedByteArray, start: int, count: int) -> float:
 		sum += absi(d.decode_s16(i * 2))
 	return sum / count
 
-# 소음이 섞여 있어 매번 새로 만들면 같은 소리가 매번 달라진다. 그리고 매 조작마다
-# 만 번 넘는 계산을 다시 돌게 된다.
+# 파형 하나에 수만 번의 사인 계산이 든다. 매 조작마다 다시 돌리면 조작할 때마다
+# 게임이 멈춘다.
 func _test_waveforms_are_cached() -> void:
 	assert(Sfx.stream(Sfx.ROTATE) == Sfx.stream(Sfx.ROTATE), "파형이 매번 새로 만들어진다")
 

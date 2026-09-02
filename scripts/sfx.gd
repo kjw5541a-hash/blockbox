@@ -42,6 +42,10 @@ func _ready() -> void:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		_players.append(p)
+	# 미리 다 만들어 둔다. 아홉 개 합쳐 100ms 남짓인데, 게임 중에 처음 울리는
+	# 소리마다 그만큼씩 멈추면 그게 눈에 띈다. 시작 화면이 뜨기 전은 안 띈다.
+	for name in NAMES:
+		Sfx.stream(name)
 
 func _exit_tree() -> void:
 	if _inst == self:
@@ -61,8 +65,8 @@ func _speak(name: StringName) -> void:
 	p.play()
 	last = name
 
-# 소리마다 서로 다른 크기로 맞춘다. 파형을 손으로 맞추면 필터 계수 하나만
-# 건드려도 크기가 통째로 달라지고, 소음이 섞인 소리는 켤 때마다 달라진다.
+# 소리마다 서로 다른 크기로 맞춘다. 크기를 손으로 맞추면 배음 하나를 더하거나
+# 음을 하나 겹치는 것만으로 전체 크기가 달라져 매번 다시 맞춰야 한다.
 # 층 클리어가 제일 크고, 매 칸 울리는 이동과 버튼 딸깍이 제일 작다.
 const PEAK := {
 	ROTATE: 0.55, MOVE: 0.40, DROP: 0.60, LOCK: 0.75, CLEAR: 0.90,
@@ -126,105 +130,134 @@ static func _bake(buf: PackedFloat32Array) -> AudioStreamWAV:
 	s.data = bytes
 	return s
 
-# 쉭 — 소음을 저역통과로 걸러 밝기를 끌어올린다. 음정이 없어야 바람으로 들린다.
-static func _rotate() -> PackedFloat32Array:
-	var b := _buf(0.14)
-	var lp := 0.0
-	for i in b.size():
-		var t := float(i) / b.size()
-		lp = lerpf(lp, randf_range(-1.0, 1.0), lerpf(0.05, 0.85, t * t))
-		b[i] = lp * exp(-t * 4.5) * minf(1.0, t * 30.0)
+# 소리는 전부 유리종 하나로 만든다. 배음을 정수배에서 살짝 어긋나게 얹으면
+# 금속이 아니라 유리로 들리고, 높은 배음이 먼저 사라지면 맑게 남는다.
+# 소음(noise)은 한 군데도 쓰지 않는다 — 소음이 섞이는 순간 상큼함이 죽는다.
+const PARTIALS := [1.0, 2.01, 3.03, 4.7]
+const PARTIAL_GAIN := [1.0, 0.5, 0.28, 0.14]
+# 사인파를 그냥 시작하면 딸깍 소리가 난다. 2.5ms 면 딸깍은 지우고 또렷함은 남는다.
+const ATTACK := 0.0025
+
+# fade 를 키우면 같은 종이 더 빨리 잦아든다. 또르르 구르는 소리는 알끼리 겹치면
+# 한 덩어리로 뭉쳐 들리므로, 짧게 쓸 때만 키운다.
+static func _bell(b: PackedFloat32Array, at: float, freq: float, dur: float,
+		amp: float, fade := 1.0) -> void:
+	var start := int(at * RATE)
+	var n := mini(int(dur * RATE), b.size() - start)
+	for k in PARTIALS.size():
+		var f: float = freq * PARTIALS[k]
+		# 나이퀴스트 위는 접혀 내려와 음계에 없는 소리로 들린다.
+		if f > RATE * 0.45:
+			continue
+		var g: float = PARTIAL_GAIN[k] * amp
+		# 높은 배음일수록 빨리 사라진다.
+		var decay := (4.0 + k * 3.0) * fade
+		for i in n:
+			var u := float(i) / RATE
+			b[start + i] += sin(TAU * f * u) * exp(-u * decay) \
+				* minf(1.0, u / ATTACK) * g
+
+# 울림 — 서로 배수가 아닌 지연 셋을 겹친다. 신비로움은 소리 자체보다 소리가
+# 사라지는 방식에서 온다. 지연이 서로 배수면 메아리가 겹쳐 통 속 소리가 된다.
+const ECHO_DELAYS := [0.037, 0.053, 0.071]
+const ECHO_FEEDBACK := 0.32
+
+static func _echo(b: PackedFloat32Array) -> PackedFloat32Array:
+	for d in ECHO_DELAYS:
+		var n := int(d * RATE)
+		for i in range(n, b.size()):
+			b[i] += b[i - n] * ECHO_FEEDBACK
 	return b
 
-# 드르르르륵 — 짧은 딸깍을 촘촘히 이어 붙인다. 하나하나는 소음이지만 간격이
-# 일정해 굴러가는 소리로 뭉친다.
-const MOVE_CLICKS := 9
+# 5음 음계(도-레-미-솔-라). 어느 둘을 겹쳐도 부딪히지 않아서, 소리들이 서로
+# 물려 울려도 지저분해지지 않는다.
+const C4 := 261.63
+const G4 := 392.0
+const C5 := 523.25
+const D5 := 587.33
+const E5 := 659.25
+const G5 := 783.99
+const A5 := 880.0
+const C6 := 1046.5
+const E6 := 1318.51
+const G6 := 1567.98
+const A6 := 1760.0
+
+# 회전 — 두 음이 위로 스치고 지나간다.
+static func _rotate() -> PackedFloat32Array:
+	var b := _buf(0.32)
+	_bell(b, 0.0, E6, 0.2, 0.8)
+	_bell(b, 0.035, A6, 0.25, 0.6)
+	return _echo(b)
+
+# 이동 — 유리알이 또르르 구른다. 매 칸마다 울리므로 제일 짧고 제일 여리다.
+const MOVE_TICKS := 3
+const MOVE_GAP := 0.038
+const MOVE_RUN := [E6, G6, A6]
 
 static func _move() -> PackedFloat32Array:
-	var b := _buf(0.16)
-	for i in b.size():
-		var t := float(i) / b.size()
-		var click := fmod(t * MOVE_CLICKS, 1.0)
-		var body := sin(TAU * 190.0 * i / RATE) * 0.5 + randf_range(-1.0, 1.0)
-		b[i] = body * exp(-click * 20.0) * exp(-t * 1.6)
-	return b
+	var b := _buf(0.22)
+	for i in MOVE_TICKS:
+		_bell(b, i * MOVE_GAP, MOVE_RUN[i], 0.08, 0.8 - i * 0.15, 6.0)
+	return _echo(b)
 
-# 내리기 — 위에서 아래로 훑고 지나간다. 차단 주파수를 내려 떨어지는 느낌을 준다.
+# 내리기 — 음계를 타고 아래로 떨어진다.
+const DROP_RUN := [A6, G6, E6, C6]
+
 static func _drop() -> PackedFloat32Array:
-	var b := _buf(0.2)
-	var lp := 0.0
-	var ph := 0.0
-	for i in b.size():
-		var t := float(i) / b.size()
-		lp = lerpf(lp, randf_range(-1.0, 1.0), lerpf(0.8, 0.05, t))
-		ph += TAU * lerpf(700.0, 120.0, t * t) / RATE
-		b[i] = (lp * 0.6 + sin(ph) * 0.4) * exp(-t * 2.5)
-	return b
+	var b := _buf(0.5)
+	for i in DROP_RUN.size():
+		_bell(b, i * 0.035, DROP_RUN[i], 0.35, 0.75)
+	return _echo(b)
 
-# 착지 — 낮은 음이 더 낮게 떨어진다. 앞머리에 딸깍을 얹어 닿는 순간을 세운다.
+# 착지 — 낮고 둥근 종. 쿵이 아니라 웅 하고 내려앉는다.
 static func _lock() -> PackedFloat32Array:
-	var b := _buf(0.16)
-	var ph := 0.0
-	for i in b.size():
-		var t := float(i) / b.size()
-		ph += TAU * lerpf(160.0, 55.0, t) / RATE
-		b[i] = sin(ph) * exp(-t * 5.0) * 0.65 + randf_range(-1.0, 1.0) * exp(-t * 60.0) * 0.3
-	return b
+	var b := _buf(0.6)
+	_bell(b, 0.0, C4, 0.5, 1.0)
+	_bell(b, 0.0, G4, 0.45, 0.4)
+	return _echo(b)
 
-# 층이 지워질 때 — 화음을 한 음씩 쌓아 올린다. 게임에서 제일 좋은 순간이라
-# 제일 길고 제일 화려하다. 배음을 살짝 어긋나게 얹으면 종처럼 울린다.
-const CLEAR_NOTES := [523.25, 659.25, 783.99, 987.77, 1318.51]
-const CLEAR_GAP := 0.07
+# 층이 지워질 때 — 음계를 타고 끝까지 올라갔다가 맨 위에서 한 번 더 반짝인다.
+# 게임에서 제일 좋은 순간이라 제일 길고 제일 화려하다.
+const CLEAR_RUN := [C5, D5, E5, G5, A5, C6]
+const CLEAR_GAP := 0.075
 
 static func _clear() -> PackedFloat32Array:
-	var b := _buf(CLEAR_GAP * CLEAR_NOTES.size() + 0.75)
-	for n in CLEAR_NOTES.size():
-		var f: float = CLEAR_NOTES[n]
-		var start := int(n * CLEAR_GAP * RATE)
-		for i in range(start, b.size()):
-			var u := float(i - start) / RATE
-			var v := sin(TAU * f * u) + 0.5 * sin(TAU * f * 2.0 * u) \
-				+ 0.25 * sin(TAU * f * 3.01 * u)
-			b[i] += v * exp(-u * 5.0)
-	return b
+	var b := _buf(1.4)
+	for i in CLEAR_RUN.size():
+		_bell(b, i * CLEAR_GAP, CLEAR_RUN[i], 0.7, 0.8)
+	var top := CLEAR_RUN.size() * CLEAR_GAP
+	_bell(b, top, E6, 0.7, 0.7)
+	_bell(b, top + 0.05, G6, 0.7, 0.5)
+	return _echo(b)
 
-# 레벨업 — 짧게 세 계단 올라간다.
-const LEVEL_NOTES := [659.25, 830.61, 987.77]
+# 레벨업 — 세 음이 차례로 들어와 화음으로 남는다.
+const LEVEL_RUN := [C6, E6, G6]
 
 static func _level() -> PackedFloat32Array:
-	var b := _buf(0.36)
-	var step := b.size() / LEVEL_NOTES.size()
-	for i in b.size():
-		var n := mini(i / step, LEVEL_NOTES.size() - 1)
-		var u := float(i - n * step) / RATE
-		var f: float = LEVEL_NOTES[n]
-		b[i] = (sin(TAU * f * u) + 0.3 * sin(TAU * f * 2.0 * u)) * exp(-u * 12.0)
-	return b
+	var b := _buf(0.7)
+	for i in LEVEL_RUN.size():
+		_bell(b, i * 0.06, LEVEL_RUN[i], 0.5, 0.8)
+	return _echo(b)
 
-# 게임 종료 — 음이 끝까지 내려앉는다.
+# 게임 종료 — 같은 음계를 거꾸로 내려온다. 어둡게가 아니라 멀어지게.
+const OVER_RUN := [A5, G5, E5, D5, C5]
+
 static func _over() -> PackedFloat32Array:
-	var b := _buf(0.8)
-	var ph := 0.0
-	for i in b.size():
-		var t := float(i) / b.size()
-		ph += TAU * lerpf(392.0, 98.0, t) / RATE
-		b[i] = (sin(ph) + 0.35 * sin(ph * 2.0)) * exp(-t * 2.2)
-	return b
+	var b := _buf(1.5)
+	for i in OVER_RUN.size():
+		_bell(b, i * 0.16, OVER_RUN[i], 0.8, 0.8 - i * 0.1)
+	return _echo(b)
 
-# 시점 돌리기 — 조각 회전보다 낮고 부드럽다. 도는 건 통이지 조각이 아니다.
+# 시점 돌리기 — 조각 회전보다 낮고 느리다. 도는 건 통이지 조각이 아니다.
 static func _turn() -> PackedFloat32Array:
-	var b := _buf(0.26)
-	var lp := 0.0
-	for i in b.size():
-		var t := float(i) / b.size()
-		lp = lerpf(lp, randf_range(-1.0, 1.0), 0.04 + 0.12 * sin(PI * t))
-		b[i] = lp * sin(PI * t)
-	return b
+	var b := _buf(0.4)
+	_bell(b, 0.0, D5, 0.3, 0.8)
+	_bell(b, 0.05, A5, 0.3, 0.5)
+	return _echo(b)
 
-# 버튼 — 아주 짧은 딸깍. 눌린 걸 알려주는 것 말고는 하는 일이 없다.
+# 버튼 — 유리알 하나. 눌린 걸 알려주는 것 말고는 하는 일이 없다.
 static func _ui() -> PackedFloat32Array:
-	var b := _buf(0.05)
-	for i in b.size():
-		var t := float(i) / b.size()
-		b[i] = sin(TAU * 880.0 * i / RATE) * exp(-t * 9.0)
-	return b
+	var b := _buf(0.18)
+	_bell(b, 0.0, C6, 0.12, 0.8, 2.0)
+	return _echo(b)
