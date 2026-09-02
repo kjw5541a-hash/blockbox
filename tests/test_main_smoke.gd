@@ -50,42 +50,43 @@ func _initialize() -> void:
 			key_moved = true
 	assert(key_moved, "방향키 넷 중 최소 하나는 조각을 옮겨야 한다")
 
-	# 조각 뷰의 큐브가 격자 좌표와 같은 자리에 있어야 한다.
+	# 조각 뷰의 껍데기가 격자 좌표와 같은 자리에 있어야 한다.
 	var piece_view: Node3D = main.piece_view
 	var world := game.current.world_cells()
-	for i in world.size():
-		var cube: MeshInstance3D = piece_view.get_child(i)
-		assert(cube.visible, "조각 큐브가 보여야 한다")
-		assert(cube.position == Vector3(world[i]),
-			"큐브 위치 %s 가 격자 좌표 %s 와 어긋난다" % [cube.position, world[i]])
+	var solid: MeshInstance3D = piece_view._solid
+	assert(solid.visible, "떨어지는 조각이 보여야 한다")
+	var solid_aabb := (solid.mesh as ArrayMesh).get_aabb()
+	assert(solid_aabb.position.is_equal_approx(
+			Vector3(Piece.bbox_min(world)) - Vector3.ONE * 0.5),
+		"조각 껍데기 %s 가 격자 좌표와 어긋난다" % solid_aabb.position)
 
 	# 잠긴 조각이 보드 뷰에 반영되어야 한다.
-	var board_view: MultiMeshInstance3D = main.board_view
+	var board_view: MeshInstance3D = main.board_view
 	var locked_kind: int = game.current.kind
-	var falling_mat := (piece_view.get_child(0) as MeshInstance3D).material_override as StandardMaterial3D
+	var falling_mat := solid.material_override as StandardMaterial3D
 	var falling_albedo := falling_mat.albedo_color
+	var landing := game.ghost_cells()
 	game.hard_drop()
-	assert(board_view.multimesh.visible_instance_count == 4,
-		"잠긴 4칸이 보드 뷰에 나와야 한다: %d" % board_view.multimesh.visible_instance_count)
+	var stack := (board_view.mesh as ArrayMesh).get_aabb()
+	assert(stack.position.is_equal_approx(
+			Vector3(Piece.bbox_min(landing)) - Vector3.ONE * 0.5),
+		"잠긴 칸이 보드 뷰에 나오지 않았다: %s, 착지 %s" % [stack, landing])
 
 	# 조각이 잠기는 순간 색이 튀면 안 된다. 떨어지는 조각은 albedo_color 로,
-	# 잠긴 칸은 MultiMesh 인스턴스 색(정점 색)으로 그려진다. 두 경로가 같은 값을
+	# 잠긴 칸은 정점 색으로 그려진다. 두 경로가 같은 값을
 	# 넣는 것만으로는 부족하다 — albedo_color 는 sRGB 로 해석되므로 정점 색도
 	# 같게 읽어야 한다. 아니면 잠기는 순간 같은 색이 밝은 쪽으로 튄다.
-	#
-	# 인스턴스 색을 되읽어 비교하지는 못한다. headless 렌더 서버는
-	# get_instance_color 로 항상 검정을 준다 — 값이 아니라 배선만 확인한다.
 	var want := BlockColors.of(locked_kind)
 	assert(Vector3(falling_albedo.r, falling_albedo.g, falling_albedo.b).is_equal_approx(
 		Vector3(want.r, want.g, want.b)),
 		"떨어지는 %d 번 조각 색이 색표와 다르다: %s" % [locked_kind, falling_albedo])
-	var board_mat := board_view.multimesh.mesh.material as StandardMaterial3D
+	var board_mat := board_view.material_override as StandardMaterial3D
 	assert(board_mat.vertex_color_is_srgb,
 		"정점 색을 선형으로 읽으면 albedo_color 쪽보다 밝게 나와 잠길 때 색이 튄다")
 
 	# HUD 가 게임 상태를 실제로 따라가는지 확인한다.
 	var hud: CanvasLayer = main.get_node("HUD")
-	assert(hud.get_node("Top/NextSwatch").color == BlockColors.of(game.next_kind),
+	assert(hud.get_node("Side/NextSwatch").color == BlockColors.of(game.next_kind),
 		"다음 조각 색 견본이 실제 next_kind 와 어긋난다")
 
 	# 회전 버튼 셋이 각자 제 화면 축에 물려 있는지 본다. 버튼이 서로 바뀌어도
@@ -108,6 +109,34 @@ func _initialize() -> void:
 		assert(game.current.cells == turned,
 			"%s 버튼이 화면 축 %s 이 아닌 다른 축으로 돌린다" % [button_name, axis])
 
+	# 일시정지 버튼. 낙하만 멈추면 멈춰 둔 채로 조각을 원하는 자리까지 옮겨
+	# 놓을 수 있으므로, 조작도 같이 멈춰야 한다.
+	var pause_button: Button = hud.get_node("Side/Pause")
+	pause_button.pressed.emit()
+	assert(game.paused, "일시정지 버튼이 게임을 멈추지 않았다")
+	assert(hud.get_node("Paused").visible, "멈춘 줄 모르면 멈춘 게 아니다")
+	var held: Vector3i = game.current.origin
+	game.move(Vector3i(1, 0, 0))
+	game.rotate(Piece.AXIS_Y, 1)
+	game.hard_drop()
+	assert(game.current != null and game.current.origin == held,
+		"멈춘 동안 조각이 움직였다: %s -> %s" % [held, game.current.origin])
+	for _i in 30:
+		await process_frame
+	assert(game.current.origin == held,
+		"멈춘 동안 조각이 저절로 내려갔다: %s" % game.current.origin)
+
+	pause_button.pressed.emit()
+	assert(not game.paused and not hud.get_node("Paused").visible,
+		"다시 누르면 풀려야 한다")
+	var resume_deadline := Time.get_ticks_msec() + 5000
+	while game.current != null and game.current.origin == held:
+		if Time.get_ticks_msec() > resume_deadline:
+			break
+		await process_frame
+	assert(game.current == null or game.current.origin != held,
+		"일시정지를 풀었는데 조각이 다시 내려오지 않는다")
+
 	# 층이 지워지면 화면이 한 번 번쩍하고 곧 가라앉는다.
 	var flash: ColorRect = hud.get_node("Flash")
 	assert(flash.mouse_filter == Control.MOUSE_FILTER_IGNORE,
@@ -124,7 +153,7 @@ func _initialize() -> void:
 	var gauge_bar: ColorRect = gauge._bars[Board.HEIGHT - 1]
 	gauge_bar.size.x = 48.0
 
-	var score_label: Label = hud.get_node("Top/Score")
+	var score_label: Label = hud.get_node("Side/Score")
 	score_label.text = "낡은 값"
 	hud.get_node("GameOver").visible = true
 	var restart_key := InputEventKey.new()
@@ -163,6 +192,12 @@ func _initialize() -> void:
 	assert(not hud.get_node("GameOver").visible, "재시작하면 종료 표시가 사라져야 한다")
 
 	assert(game.board.cells.size() == 224, "보드 크기가 유지되어야 한다")
+
+	# 종료 버튼도 R 재시작처럼 이번 판 점수를 남기고 나가야 한다.
+	game.score = 12000
+	(hud.get_node("Side/Quit") as Button).pressed.emit()
+	assert(SaveData.load_high_score() == 12000,
+		"종료할 때 점수를 기록에 남기지 않았다: 최고 %d" % SaveData.load_high_score())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveData.PATH))
 	print("test_main_smoke: OK")
 	quit()
