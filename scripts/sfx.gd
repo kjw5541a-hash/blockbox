@@ -69,7 +69,7 @@ func _speak(name: StringName) -> void:
 # 음을 하나 겹치는 것만으로 전체 크기가 달라져 매번 다시 맞춰야 한다.
 # 층 클리어가 제일 크고, 매 칸 울리는 이동과 버튼 딸깍이 제일 작다.
 const PEAK := {
-	ROTATE: 0.50, MOVE: 0.14, DROP: 0.50, LOCK: 0.70, CLEAR: 0.85,
+	ROTATE: 0.26, MOVE: 0.14, DROP: 0.50, LOCK: 0.70, CLEAR: 0.85,
 	LEVEL: 0.60, OVER: 0.60, TURN: 0.22, UI: 0.28,
 }
 
@@ -192,6 +192,8 @@ const C3 := 130.81
 const G3 := 196.0
 const C4 := 261.63
 const G4 := 392.0
+const E4 := 329.63
+const A4 := 440.0
 const C5 := 523.25
 const D5 := 587.33
 const E5 := 659.25
@@ -204,8 +206,8 @@ const A6 := 1760.0
 
 # 회전 — 아래에서 위로 세 음을 스치듯 훑는다. 제일 자주 듣는 소리라 제일
 # 공들였다.
-const ROTATE_RUN := [E5, A5, E6]
-const ROTATE_GAP := 0.026
+const ROTATE_RUN := [E4, A4, E5]
+const ROTATE_GAP := 0.032
 # 맨 위 음만 아주 살짝 어긋나게 한 번 더 겹친다. 두 음이 맥놀이로 천천히
 # 흔들리며 반짝인다 — 배음을 더 얹는 것보다 조용하면서 더 신비롭다.
 const ROTATE_SHIMMER := 1.004
@@ -213,11 +215,11 @@ const ROTATE_SHIMMER := 1.004
 static func _rotate() -> PackedFloat32Array:
 	var b := _buf(0.6)
 	for i in ROTATE_RUN.size():
-		_bell(b, i * ROTATE_GAP, ROTATE_RUN[i], 0.4, 0.55 + i * 0.15)
+		_bell(b, i * ROTATE_GAP, ROTATE_RUN[i], 0.4, 0.6 + i * 0.1)
 	var top := (ROTATE_RUN.size() - 1) * ROTATE_GAP
 	_bell(b, top, ROTATE_RUN[ROTATE_RUN.size() - 1] * ROTATE_SHIMMER, 0.4, 0.5)
 	# 바닥에 낮은 음 하나. 몸이 생겨야 스치는 소리가 가벼워지지 않는다.
-	_bell(b, 0.0, ROTATE_RUN[0] * 0.25, 0.45, 0.3)
+	_bell(b, 0.0, ROTATE_RUN[0] * 0.5, 0.45, 0.3)
 	return b
 
 # 이동 — 유리알이 또르르 구른다. 매 칸마다 울리므로 거의 들리지 않을 만큼
